@@ -22,6 +22,7 @@ public class RequestsApiTests
         var client = _factory.CreateClient();
 
         using var scope = _factory.Services.CreateScope();
+
         var dbContext =
             scope.ServiceProvider.GetRequiredService<AppDbContext>();
 

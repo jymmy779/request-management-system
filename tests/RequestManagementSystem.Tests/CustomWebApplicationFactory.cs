@@ -5,6 +5,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RequestManagementSystem.Api.Data;
 
 namespace RequestManagementSystem.Tests;
@@ -14,6 +15,9 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+
+        builder.ConfigureLogging(logging =>
+            logging.ClearProviders());
 
         builder.UseSetting(
             "Jwt:Key",

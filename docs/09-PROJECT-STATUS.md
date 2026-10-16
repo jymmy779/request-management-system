@@ -29,9 +29,9 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - [x] Documented restore, migration, run, and test commands in README.
 - [x] Initialized the Git repository, added `.gitignore`, and pushed the initial project to GitHub.
 
-## Current milestone
+## Previous completed milestone
 
-**M2 — Login, users, and RBAC. In progress.**
+**M2 — Login, users, and RBAC. Complete.**
 
 ### M2 verified progress
 
@@ -44,7 +44,7 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - [x] Added `TokenService` to create signed access tokens containing user and role claims.
 - [x] Added an idempotent development-only seeder for Employee, Manager, and Admin accounts; no password is committed.
 - [x] Verified all three demo users and their role assignments in local SQL Server.
-- [x] Registered the named `ManagerOrAdmin` authorization policy with restrictive user-delete behavior planned for owned requests.
+- [x] Registered the named `ManagerOrAdmin` and `CanAccessRequests` authorization policies.
 - [x] Added `POST /api/auth/login` and manually verified login against SQL Server.
 - [x] Added authenticated `GET /api/auth/me`, returning only `id`, `email`, and `role` through a DTO.
 - [x] Added required `Request.RequesterId` ownership with an EF Core foreign key to `AspNetUsers` and `DeleteBehavior.Restrict`.
@@ -53,12 +53,48 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - [x] Filtered request lists by verified JWT identity and role: Employee sees owned requests; Manager/Admin see all.
 - [x] Added integration tests for valid login, invalid password, `/me` without a token, and `/me` with a valid token.
 - [x] Added request authorization tests for 401, Employee ownership isolation, Manager access, and Admin access.
-- [x] Developer confirmed the full integration suite passes: 8/8 tests on 2026-10-16.
+- [x] Added login and `/me` role coverage for Employee, Manager, and Admin.
+- [x] Applied `CanAccessRequests` to request endpoints, requiring Employee, Manager, or Admin.
+- [x] Verified a valid JWT without a recognized application role receives `403 Forbidden`.
+- [x] Developer confirmed the full integration suite passes: 11/11 tests on 2026-10-16.
 
-### Remaining M2 work
+### M2 completion note
 
-- [ ] Apply role-based authorization policies to protected business endpoints.
-- [ ] Add Manager/Admin login-role coverage and a 403 test when a real Manager/Admin-only endpoint is implemented.
+- `ManagerOrAdmin` is reserved for approval workflow endpoints introduced in M4; M2 does not add a placeholder endpoint solely to exercise this policy.
+- M2 acceptance criteria are complete: all three demo roles can authenticate, request visibility follows ownership and role, and 401/403 behavior is covered by integration tests.
+
+## Latest completed milestone
+
+**M3 — Create/detail and validation. Complete.**
+
+### M3 verified progress
+
+- [x] Added required `Request.Category` with the default value `Other`.
+- [x] Centralized the three fixed MVP category values in `RequestCategories`; no category table is needed yet.
+- [x] Generated and applied the `AddRequestCategory` migration; existing requests were assigned `Other`.
+- [x] Verified the API project builds after adding the property: 0 errors on 2026-10-16.
+- [x] Added `CreateRequestDto` validation for title, description, and the three supported categories.
+- [x] Added `RequestResponseDto` so request APIs do not expose the EF navigation object.
+- [x] Added `RequestService.CreateAsync()` to persist a new Pending request owned by the authenticated user and return a response DTO.
+- [x] Added authenticated `POST /api/requests`; requester ownership comes only from the JWT and successful creation returns `201 Created`.
+- [x] Renamed the shared request policy to `CanAccessRequests` so its name covers both viewing and creating requests.
+- [x] Added an integration test proving valid creation returns 201, assigns JWT ownership, and persists the row.
+- [x] Cleared platform-specific logging providers in the test host so integration tests do not require Windows Event Log access.
+- [x] Added validation integration coverage for invalid title, description, and category; all return 400 without persisting data.
+- [x] Added ownership-aware `RequestService.GetByIdAsync()` with DTO projection; inaccessible requests return no result.
+- [x] Added `GET /api/requests/{id}`, returning 200 for a visible request and 404 when missing or outside an Employee's ownership scope.
+- [x] Added request-detail integration coverage for owner access, Employee isolation, Manager/Admin access, and a missing ID.
+- [x] Changed request-list queries to return `RequestResponseDto` projections instead of EF entities.
+
+### M3 completion note
+
+- Request creation and detail retrieval persist correctly and enforce validation, authentication, roles, and ownership.
+- Request history is intentionally deferred to the complete audit implementation in M4, as allowed by the milestone plan.
+- The full integration suite passes 20/20 tests.
+
+## Current milestone
+
+**M4 — Approval workflow and audit. Not started.**
 
 ## Known technical debt
 
@@ -70,8 +106,8 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - API build: developer confirmed `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj` succeeded after extending the demo-user seeder.
 - Database: developer confirmed Employee, Manager, and Admin demo users exist and each has the correct role in local SQL Server.
 - Manual auth: developer confirmed login returns an access token.
-- Tests: developer confirmed `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 8/8 tests after JWT protection and ownership filtering.
+- Tests: `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 20/20 tests after adding request-detail authorization and not-found coverage.
 
 ## Next single task
 
-Add authentication integration coverage proving Manager and Admin logins receive their correct role through `GET /api/auth/me`.
+Start M4 by defining the five request status constants and replacing the existing raw `Pending` strings; do not implement transitions yet.

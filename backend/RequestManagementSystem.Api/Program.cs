@@ -55,12 +55,17 @@ builder.Services
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(
+       AppPolicies.CanAccessRequests,
+       policy => policy.RequireRole(
+           AppRoles.Employee,
+           AppRoles.Manager,
+           AppRoles.Admin));
+
+    options.AddPolicy(
         AppPolicies.ManagerOrAdmin,
         policy => policy.RequireRole(
             AppRoles.Manager,
-            AppRoles.Admin
-        )
-    );
+            AppRoles.Admin));
 });
 
 builder.Services.AddScoped<RequestService>();

@@ -1,9 +1,11 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RequestManagementSystem.Api.Authorization;
 using RequestManagementSystem.Api.Data;
+using RequestManagementSystem.Api.DTOs;
 using RequestManagementSystem.Api.Models;
 using RequestManagementSystem.Api.Services;
 using RequestModel = RequestManagementSystem.Api.Models.Request;
@@ -115,7 +117,7 @@ public class RequestsApiTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var requests =
-            await response.Content.ReadFromJsonAsync<List<RequestModel>>();
+            await response.Content.ReadFromJsonAsync<List<RequestResponseDto>>();
 
         Assert.NotNull(requests);
         Assert.Equal(expectedCount, requests.Count);
@@ -131,5 +133,302 @@ public class RequestsApiTests
             canSeeOtherEmployeeRequest,
             containsOtherEmployeeRequest);
 
+    }
+
+    [Fact]
+    public async Task GetAll_WithRolelessAccessToken_ReturnsForbidden()
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var rolelessUser = new ApplicationUser
+        {
+            UserName = "roleless@test.local",
+            Email = "roleless@test.local",
+            EmailConfirmed = true
+        };
+
+        var accessToken = tokenService.CreateToken(
+            rolelessUser,
+            Array.Empty<string>());
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var response = await client.GetAsync("/api/requests");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_WithValidInput_ReturnsCreatedAndPersistsOwnedRequest()
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var employee = new ApplicationUser
+        {
+            UserName = "employee@test.local",
+            Email = "employee@test.local",
+            EmailConfirmed = true
+        };
+
+        dbContext.Users.Add(employee);
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            employee,
+            new[] { AppRoles.Employee });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var dto = new CreateRequestDto
+        {
+            Title = "Request a new monitor",
+            Description = "A second monitor is needed for development work.",
+            Category = RequestCategories.Equipment
+        };
+
+        var response = await client.PostAsJsonAsync(
+            "/api/requests",
+            dto);
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        var createdRequest =
+            await response.Content.ReadFromJsonAsync<RequestResponseDto>();
+
+        Assert.NotNull(createdRequest);
+        Assert.Equal(employee.Id, createdRequest.RequesterId);
+        Assert.Equal("Pending", createdRequest.Status);
+        Assert.Equal(RequestCategories.Equipment, createdRequest.Category);
+        Assert.Equal(
+            $"/api/requests/{createdRequest.Id}",
+            response.Headers.Location?.ToString());
+
+        var savedRequest = await dbContext.Requests
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(createdRequest.Id, savedRequest.Id);
+        Assert.Equal(employee.Id, savedRequest.RequesterId);
+        Assert.Equal(dto.Title, savedRequest.Title);
+    }
+
+    [Theory]
+    [InlineData(
+        "Bad",
+        "This description is long enough.",
+        RequestCategories.Equipment)]
+    [InlineData(
+        "A valid title",
+        "Too short",
+        RequestCategories.Software)]
+    [InlineData(
+        "A valid title",
+        "This description is long enough.",
+        "Invalid category")]
+    public async Task Create_WithInvalidInput_ReturnsBadRequestAndDoesNotPersist(
+        string title,
+        string description,
+        string category)
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var employee = new ApplicationUser
+        {
+            UserName = "employee@test.local",
+            Email = "employee@test.local",
+            EmailConfirmed = true
+        };
+
+        dbContext.Users.Add(employee);
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            employee,
+            new[] { AppRoles.Employee });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var dto = new CreateRequestDto
+        {
+            Title = title,
+            Description = description,
+            Category = category
+        };
+
+        var response = await client.PostAsJsonAsync(
+            "/api/requests",
+            dto);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+
+        Assert.Empty(
+            await dbContext.Requests
+                .AsNoTracking()
+                .ToListAsync());
+    }
+
+    [Theory]
+    [InlineData(AppRoles.Employee, true, HttpStatusCode.OK)]
+    [InlineData(AppRoles.Employee, false, HttpStatusCode.NotFound)]
+    [InlineData(AppRoles.Manager, false, HttpStatusCode.OK)]
+    [InlineData(AppRoles.Admin, false, HttpStatusCode.OK)]
+    public async Task GetById_EnforcesOwnershipAndRole(
+        string role,
+        bool isOwner,
+        HttpStatusCode expectedStatusCode)
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var owner = new ApplicationUser
+        {
+            UserName = "owner@test.local",
+            Email = "owner@test.local",
+            EmailConfirmed = true
+        };
+
+        var caller = isOwner
+            ? owner
+            : new ApplicationUser
+            {
+                UserName = "caller@test.local",
+                Email = "caller@test.local",
+                EmailConfirmed = true
+            };
+
+        dbContext.Users.Add(owner);
+
+        if (!isOwner)
+        {
+            dbContext.Users.Add(caller);
+        }
+
+        var request = new RequestModel
+        {
+            Title = "Request detail test",
+            Description = "This request is used to test detail access.",
+            Category = RequestCategories.Software,
+            RequesterId = owner.Id
+        };
+
+        dbContext.Requests.Add(request);
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            caller,
+            new[] { role });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var response = await client.GetAsync(
+            $"/api/requests/{request.Id}");
+
+        Assert.Equal(expectedStatusCode, response.StatusCode);
+
+        if (expectedStatusCode == HttpStatusCode.OK)
+        {
+            var responseDto = await response.Content
+                .ReadFromJsonAsync<RequestResponseDto>();
+
+            Assert.NotNull(responseDto);
+            Assert.Equal(request.Id, responseDto.Id);
+            Assert.Equal(owner.Id, responseDto.RequesterId);
+        }
+    }
+
+    [Fact]
+    public async Task GetById_WithMissingId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var employee = new ApplicationUser
+        {
+            UserName = "employee@test.local",
+            Email = "employee@test.local",
+            EmailConfirmed = true
+        };
+
+        dbContext.Users.Add(employee);
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            employee,
+            new[] { AppRoles.Employee });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var response = await client.GetAsync(
+            "/api/requests/999999");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
     }
 }

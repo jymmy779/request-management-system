@@ -8,6 +8,8 @@ public class Request
 
     public string Description { get; set; } = string.Empty;
 
+    public string Category { get; set; } = RequestCategories.Other;
+
     public string Status { get; set; } = "Pending";
 
     public string RequesterId { get; set; } = string.Empty;

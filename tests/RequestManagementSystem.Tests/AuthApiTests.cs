@@ -26,7 +26,9 @@ public class AuthApiTests
     [Fact]
     public async Task Login_WhenPasswordIsInvalid_ReturnsUnauthorized()
     {
-        await CreateEmployeeAsync();
+        await CreateUserAsync(
+            TestEmail,
+            AppRoles.Employee);
 
         var client = _factory.CreateClient();
 
@@ -46,7 +48,9 @@ public class AuthApiTests
     [Fact]
     public async Task Login_WhenCredentialsAreValid_ReturnsAccessToken()
     {
-        await CreateEmployeeAsync();
+        await CreateUserAsync(
+    TestEmail,
+    AppRoles.Employee);
 
         var client = _factory.CreateClient();
 
@@ -82,10 +86,17 @@ public class AuthApiTests
             response.StatusCode);
     }
 
-    [Fact]
-    public async Task Me_WithValidAccessToken_ReturnsCurrentUser()
+    [Theory]
+    [InlineData(TestEmail, AppRoles.Employee)]
+    [InlineData("manager@test.local", AppRoles.Manager)]
+    [InlineData("admin@test.local", AppRoles.Admin)]
+    public async Task Me_WithValidAccessToken_ReturnsCurrentUser(
+    string email,
+    string expectedRole)
     {
-        await CreateEmployeeAsync();
+        await CreateUserAsync(
+            email,
+            expectedRole);
 
         var client = _factory.CreateClient();
 
@@ -93,7 +104,7 @@ public class AuthApiTests
             "/api/auth/login",
             new LoginRequestDto
             {
-                Email = TestEmail,
+                Email = email,
                 Password = TestPassword
             });
 
@@ -119,11 +130,13 @@ public class AuthApiTests
                 .ReadFromJsonAsync<CurrentUserResponseDto>();
 
         Assert.NotNull(currentUser);
-        Assert.Equal(TestEmail, currentUser.Email);
-        Assert.Equal(AppRoles.Employee, currentUser.Role);
+        Assert.Equal(email, currentUser.Email);
+        Assert.Equal(expectedRole, currentUser.Role);
     }
 
-    private async Task CreateEmployeeAsync()
+    private async Task CreateUserAsync(
+    string email,
+    string role)
     {
         using var scope = _factory.Services.CreateScope();
 
@@ -137,36 +150,38 @@ public class AuthApiTests
             scope.ServiceProvider
                 .GetRequiredService<UserManager<ApplicationUser>>();
 
-        var existingUser =
-            await userManager.FindByEmailAsync(TestEmail);
+        var user = await userManager.FindByEmailAsync(email);
 
-        if (existingUser is not null)
+        if (user is null)
         {
-            return;
+            user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email,
+                EmailConfirmed = true
+            };
+
+            var createResult =
+                await userManager.CreateAsync(
+                    user,
+                    TestPassword);
+
+            Assert.True(
+                createResult.Succeeded,
+                string.Join(
+                    "; ",
+                    createResult.Errors.Select(
+                        error => error.Description)));
         }
 
-        var user = new ApplicationUser
+        if (!await userManager.IsInRoleAsync(user, role))
         {
-            UserName = TestEmail,
-            Email = TestEmail,
-            EmailConfirmed = true
-        };
+            var roleResult =
+                await userManager.AddToRoleAsync(
+                    user,
+                    role);
 
-        var createResult =
-            await userManager.CreateAsync(user, TestPassword);
-
-        Assert.True(
-            createResult.Succeeded,
-            string.Join(
-                "; ",
-                createResult.Errors.Select(
-                    error => error.Description)));
-
-        var roleResult =
-            await userManager.AddToRoleAsync(
-                user,
-                AppRoles.Employee);
-
-        Assert.True(roleResult.Succeeded);
+            Assert.True(roleResult.Succeeded);
+        }
     }
 }

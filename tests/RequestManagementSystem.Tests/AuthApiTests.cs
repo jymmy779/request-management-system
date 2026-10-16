@@ -39,7 +39,7 @@ public class AuthApiTests
             });
 
         Assert.Equal(
-            System.Net.HttpStatusCode.Unauthorized,
+            HttpStatusCode.Unauthorized,
             response.StatusCode);
     }
 

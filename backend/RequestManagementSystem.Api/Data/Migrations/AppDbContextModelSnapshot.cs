@@ -235,6 +235,10 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("RequesterId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -244,6 +248,8 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("RequesterId");
 
                     b.ToTable("Requests");
                 });
@@ -297,6 +303,17 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RequestManagementSystem.Api.Models.Request", b =>
+                {
+                    b.HasOne("RequestManagementSystem.Api.Models.ApplicationUser", "Requester")
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Requester");
                 });
 #pragma warning restore 612, 618
         }

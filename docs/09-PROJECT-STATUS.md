@@ -1,6 +1,6 @@
 # 09 — Current Project Status (living document)
 
-**Last updated:** 2026-10-15  
+**Last updated:** 2026-10-16  
 **Source of truth:** Actual repository, verified commands, and developer confirmation.
 
 ## Goal
@@ -42,19 +42,23 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - [x] Configured JWT Bearer authentication using a signing key from User Secrets.
 - [x] Added JWT authentication and authorization middleware in the correct order.
 - [x] Added `TokenService` to create signed access tokens containing user and role claims.
-- [x] Added a development-only Employee account seeder; no password is committed.
+- [x] Added an idempotent development-only seeder for Employee, Manager, and Admin accounts; no password is committed.
+- [x] Verified all three demo users and their role assignments in local SQL Server.
+- [x] Registered the named `ManagerOrAdmin` authorization policy with restrictive user-delete behavior planned for owned requests.
 - [x] Added `POST /api/auth/login` and manually verified login against SQL Server.
 - [x] Added authenticated `GET /api/auth/me`, returning only `id`, `email`, and `role` through a DTO.
+- [x] Added required `Request.RequesterId` ownership with an EF Core foreign key to `AspNetUsers` and `DeleteBehavior.Restrict`.
+- [x] Backfilled the three existing local requests to the demo Employee before making `RequesterId` required.
+- [x] Protected `GET /api/requests` with JWT authentication.
+- [x] Filtered request lists by verified JWT identity and role: Employee sees owned requests; Manager/Admin see all.
 - [x] Added integration tests for valid login, invalid password, `/me` without a token, and `/me` with a valid token.
-- [x] Developer confirmed the full integration suite passes: 5/5 tests on 2026-10-15.
+- [x] Added request authorization tests for 401, Employee ownership isolation, Manager access, and Admin access.
+- [x] Developer confirmed the full integration suite passes: 8/8 tests on 2026-10-16.
 
 ### Remaining M2 work
 
-- [ ] Seed development Manager and Admin accounts from User Secrets.
-- [ ] Define and apply role-based authorization policies.
-- [ ] Link requests to their owner and backfill existing development data safely.
-- [ ] Filter request lists by ownership: Employee sees their own; Manager/Admin see all.
-- [ ] Add 401/403, ownership, and role-coverage tests.
+- [ ] Apply role-based authorization policies to protected business endpoints.
+- [ ] Add Manager/Admin login-role coverage and a 403 test when a real Manager/Admin-only endpoint is implemented.
 
 ## Known technical debt
 
@@ -62,12 +66,12 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 
 ## Last verification
 
-- Date: 2026-10-15
-- API build: developer confirmed `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj` succeeded.
-- Database: developer confirmed the Identity migration, roles, and development Employee account exist in local SQL Server.
+- Date: 2026-10-16
+- API build: developer confirmed `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj` succeeded after extending the demo-user seeder.
+- Database: developer confirmed Employee, Manager, and Admin demo users exist and each has the correct role in local SQL Server.
 - Manual auth: developer confirmed login returns an access token.
-- Tests: developer confirmed `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 5/5 tests.
+- Tests: developer confirmed `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 8/8 tests after JWT protection and ownership filtering.
 
 ## Next single task
 
-Extend the development user seeder to create Manager and Admin demo accounts from User Secrets, without storing passwords in source control.
+Add authentication integration coverage proving Manager and Admin logins receive their correct role through `GET /api/auth/me`.

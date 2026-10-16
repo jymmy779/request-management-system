@@ -6,6 +6,7 @@ using RequestManagementSystem.Api.Models;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using RequestManagementSystem.Api.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +52,16 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(
+        AppPolicies.ManagerOrAdmin,
+        policy => policy.RequireRole(
+            AppRoles.Manager,
+            AppRoles.Admin
+        )
+    );
+});
 
 builder.Services.AddScoped<RequestService>();
 
@@ -71,7 +81,7 @@ if (!app.Environment.IsEnvironment("Testing"))
 
     if (app.Environment.IsDevelopment())
     {
-        await DemoUserSeeder.SeedEmployeeAsync(scope.ServiceProvider);
+        await DemoUserSeeder.SeedAsync(scope.ServiceProvider);
     }
 }
 

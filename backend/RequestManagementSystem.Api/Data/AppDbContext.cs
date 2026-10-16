@@ -12,4 +12,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     }
 
     public DbSet<Request> Requests => Set<Request>();
+
+    protected override void OnModelCreating(
+        ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.Entity<Request>()
+            .HasOne(request => request.Requester)
+            .WithMany()
+            .HasForeignKey(request => request.RequesterId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 }

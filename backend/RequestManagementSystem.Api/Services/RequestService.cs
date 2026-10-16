@@ -13,8 +13,18 @@ public class RequestService
         _context = context;
     }
 
-    public async Task<List<Request>> GetAllAsync()
+    public async Task<List<Request>> GetAllAsync(
+        string requesterId,
+        bool canViewAll)
     {
-        return await _context.Requests.AsNoTracking().ToListAsync();
+        var query = _context.Requests.AsNoTracking();
+
+        if (!canViewAll)
+        {
+            query = query.Where(
+                request => request.RequesterId == requesterId);
+        }
+
+        return await query.ToListAsync();
     }
 }

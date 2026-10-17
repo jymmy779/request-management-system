@@ -39,15 +39,14 @@ Then update `09-PROJECT-STATUS.md`. For a durable product/architecture change al
 
 ## Latest handoff
 
-- **Date:** 2026-10-14.
-- **Completed stage:** M0 — Controller -> Service -> API flow verified.
-- **Verified source:** `RequestService.GetAll()` returns demo `List<Request>`; `Program.cs` registers the scoped service; `RequestsController` uses conventional constructor DI and returns `Ok(_requestService.GetAll())`.
-- **Build:** `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj` succeeded with 0 errors. It reported `NU1903` for transitive dependency `Microsoft.OpenApi 2.0.0`; review this warning before adding M1 packages.
-- **Endpoint:** developer confirms `GET /api/requests` is running and returns JSON successfully.
-- **Naming note:** filenames remain `RequestServices.cs` and `RequestsControllers.cs`, while their public class names are correctly singular. No rename was made because this is not a runtime/build error.
-- **Current stage:** M1 — EF Core + SQL Server + first tests; no M1 implementation has started.
-- **Next ONE task:** inspect local database options, choose SQL Server Express or SQL Server in Docker, and document the selected prerequisite. Do not yet install EF Core packages or create database code.
-- **Avoid:** combining database selection with `DbContext`, migrations, auth, frontend, Docker orchestration, or microservices in one task.
+- **Date:** 2026-10-17.
+- **Completed stage:** M4 — approval workflow, audit history, authorization, and SQL Server optimistic concurrency are complete.
+- **Verified behavior:** the standard test suite passes 75/75; the isolated SQL Server concurrency suite passes 1/1. Local SQL Server has all migrations through `AddRequestRowVersion`.
+- **Current stage:** M4.5 — backend query and demo-data hardening, added before the React milestone by developer agreement.
+- **Planned scope:** readable user identity (`FullName` plus email), request search/filter/sort/pagination, authorization coverage, query-driven indexes, execution-plan inspection, and an explicit high-volume local demo-data command.
+- **Deferred:** React remains M5. Cache, queue, background jobs, and external search are not added without a measured need.
+- **Next ONE task:** add `FullName` to `ApplicationUser` only; build before creating its migration.
+- **Avoid:** implementing query features, indexes, data generation, or frontend in the same task.
 
 ## Guard against context drift
 

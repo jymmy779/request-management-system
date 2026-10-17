@@ -17,6 +17,7 @@ Update only if developer agrees or code proves a decision was changed. Never sil
 | 2026-10-14 | No automatic development request seeder in M1 | Developer prefers to manage local demo rows manually and avoid persistent sample data; integration tests will create isolated test data | Accepted |
 | 2026-10-14 | SQLite in-memory for M1 GET integration tests | Fast, isolated test data without touching the local SQL Server development database; SQL Server remains the application database and is still required for provider-specific/concurrency tests later | Accepted |
 | 2026-10-17 | Separate SQL Server test project for concurrency | SQL Server `rowversion` semantics cannot be verified by SQLite; the dedicated suite creates and removes a uniquely named temporary database without touching the development database | Accepted |
+| 2026-10-17 | Add M4.5 backend query and demo-data hardening before React | The frontend needs readable user data and scalable list behavior; local high-volume demo data will also provide a concrete basis for learning indexes and query plans. Cache, queue, background jobs, and external search remain deferred until justified by measured behavior | Accepted |
 
 ## Decision template
 

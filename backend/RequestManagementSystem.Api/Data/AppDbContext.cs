@@ -27,6 +27,33 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasForeignKey(request => request.RequesterId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.Entity<Request>()
+            .Property(request => request.Status)
+            .HasMaxLength(50);
+
+        builder.Entity<Request>()
+            .HasIndex(request => new
+            {
+                request.RequesterId,
+                request.CreatedAt,
+                request.Id
+            });
+
+        builder.Entity<Request>()
+            .HasIndex(request => new
+            {
+                request.Status,
+                request.CreatedAt,
+                request.Id
+            });
+
+        builder.Entity<Request>()
+            .HasIndex(request => new
+            {
+                request.CreatedAt,
+                request.Id
+            });
+
         if (Database.IsSqlServer())
         {
             builder.Entity<Request>()

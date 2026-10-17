@@ -14,5 +14,9 @@ public class RequestResponseDto
 
     public string RequesterId { get; set; } = string.Empty;
 
+    public string RequesterFullName { get; set; } = string.Empty;
+
+    public string RequesterEmail { get; set; } = string.Empty;
+
     public DateTime CreatedAt { get; set; }
 }

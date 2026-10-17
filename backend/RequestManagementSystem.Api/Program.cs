@@ -90,6 +90,46 @@ if (!app.Environment.IsEnvironment("Testing"))
     }
 }
 
+var seedOptionIndex =
+    Array.IndexOf(args, "--seed-demo-data");
+
+if (seedOptionIndex >= 0)
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Demo request seeding is only allowed in Development.");
+    }
+
+    var requestCount = 10_000;
+
+    if (seedOptionIndex + 1 < args.Length &&
+        !int.TryParse(
+            args[seedOptionIndex + 1],
+            out requestCount))
+    {
+        throw new InvalidOperationException(
+            "Demo request count must be a valid integer.");
+    }
+
+    using var scope = app.Services.CreateScope();
+
+    var context =
+        scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var insertedCount = await DemoRequestSeeder.SeedAsync(
+        context,
+        app.Configuration,
+        requestCount);
+
+    Console.WriteLine(
+        insertedCount == 0
+            ? "Demo requests already exist. Nothing was inserted."
+            : $"Inserted {insertedCount} demo requests.");
+
+    return;
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

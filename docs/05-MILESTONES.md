@@ -4,7 +4,7 @@
 >
 > Ước tính tổng thể: MVP có thể cần **3–6 tuần** hoặc lâu hơn khi bắt đầu học C#; không cam kết deadline cố định.
 
-## M0 — Verify current scaffold & DI (CURRENT)
+## M0 — Verify current scaffold & DI
 
 **Mục tiêu:** `GET /api/requests` thực sự gọi qua `RequestService.GetAll()` và chạy ổn.
 
@@ -60,6 +60,21 @@ Tasks:
 - [ ] Unit + integration tests cho state transitions, permissions, concurrency.
 
 **DoD:** Demo từ lúc tạo đến Completed; các transition sai bị chặn; tests pass.
+
+## M4.5 — Backend query & demo-data hardening (COMPLETE)
+
+**Mục tiêu:** làm API danh sách đủ dùng cho frontend và kiểm tra hành vi truy vấn với lượng dữ liệu demo lớn trên SQL Server local.
+
+- [x] Bổ sung `FullName` cho user; response request/history hiển thị tên và email thay vì chỉ có ID khó đọc. Giữ `Role` để biểu diễn quyền hệ thống; chưa thêm `JobTitle` vì chưa có nghiệp vụ cần chức danh công việc.
+- [x] Thêm tìm kiếm theo title/description, lọc theo status/category và sắp xếp bằng danh sách trường cho phép.
+- [x] Thêm phân trang có giới hạn `pageSize`, tổng số bản ghi và tổng số trang; mặc định sắp xếp mới nhất trước.
+- [x] Giữ ownership filter trước khi trả dữ liệu: Employee chỉ thấy request của mình; Manager/Admin thấy toàn bộ.
+- [x] Thêm integration tests cho tìm kiếm, lọc, sắp xếp, phân trang và phân quyền.
+- [x] Thêm composite index phù hợp với các query thực tế; tạo migration và xem execution plan trên SQL Server trước/sau khi thêm index.
+- [x] Thêm lệnh seed demo chạy chủ động cho SQL Server local, tạo dữ liệu giả số lượng lớn theo batch và không tự chạy mỗi lần khởi động API.
+- [x] Ghi lại giới hạn đã kiểm chứng; chưa thêm cache, queue, background job hoặc search engine nếu chưa có bottleneck chứng minh nhu cầu.
+
+**DoD:** List API trả dữ liệu dễ đọc và có search/filter/sort/pagination; quyền truy cập vẫn đúng; tests pass; dữ liệu demo lớn có thể tạo lại an toàn; index và query plan được kiểm tra trên SQL Server.
 
 ## M5 — React UI (small)
 

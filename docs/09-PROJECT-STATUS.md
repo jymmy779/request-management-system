@@ -145,6 +145,39 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 
 - NuGet currently reports `NU1902`/`NU1903` vulnerability warnings for `Microsoft.OpenApi` 2.0.0 and `System.Security.Cryptography.Pkcs` 9.0.11. These warnings have not been resolved yet.
 
+## Current milestone
+
+**M4.5 — Backend query & demo-data hardening. Complete.**
+
+- [x] Add a human-readable `FullName` to users and expose user name/email through request and history DTOs.
+- [x] Add request search, status/category filters, allow-listed sorting, and bounded pagination.
+- [x] Preserve Employee ownership filtering and Manager/Admin global visibility.
+- [x] Add integration coverage for all list-query behavior and authorization.
+- [x] Add query-driven composite indexes and inspect SQL Server execution plans.
+- [x] Add an explicit local demo-data command for generating many fake records; do not seed requests automatically at API startup.
+- [x] Defer caching, queues, background jobs, and external search until a measured requirement exists.
+
+### M4.5 verified progress
+
+- [x] Added required `ApplicationUser.FullName` with a 150-character limit.
+- [x] Generated and applied the `AddUserFullName` migration to local SQL Server; developer confirmed the three demo users now have names.
+- [x] Updated the idempotent demo-user seeder so both new and existing demo users receive a configured name or a safe role-based demo name.
+- [x] Added `RequesterFullName` and `RequesterEmail` to request responses across list, create, detail, and transition results.
+- [x] Added integration assertions for requester name/email; API build succeeds and the standard suite passes 75/75 tests.
+- [x] Added validated request query parameters for search, status/category filters, and allow-listed sorting.
+- [x] Connected query-string model binding to `GET /api/requests`; filtering remains constrained by Employee ownership before results are returned.
+- [x] Added integration coverage for combined search/filter/sort behavior and invalid query values; the standard suite passes 82/82 tests.
+- [x] Changed request lists to return `PagedResult<RequestResponseDto>` with page metadata calculated from filtered, authorization-scoped results.
+- [x] Added pagination coverage for page contents, `page`, `pageSize`, `totalCount`, and `totalPages`; `RequestsApiTests` pass 27/27 and the standard suite passes 83/83.
+- [x] Added request-list indexes for `(CreatedAt, Id)`, `(RequesterId, CreatedAt, Id)`, and `(Status, CreatedAt, Id)`; the redundant single-column requester index is replaced by the requester-leading composite index.
+- [x] Limited `Request.Status` to `nvarchar(50)`, generated/reviewed `AddRequestListIndexes`, and applied it successfully to local SQL Server.
+- [x] Verified the standard suite still passes 83/83 after the index migration.
+- [x] Added an explicit `--seed-demo-data` command with a configurable 1–50,000 request count, 500-row batches, one transaction, matching audit histories, and duplicate prevention.
+- [x] Seeded and manually verified 10,000 local SQL Server requests and 17,500 histories across all five statuses; a second invocation inserted nothing.
+- [x] Added one automated seeder integration test covering status distribution, audit consistency, actor rules, rejection notes, and idempotency; the standard suite passes 84/84.
+- [x] Inspected actual SQL Server plans using 10,000 requests: ownership and status-filter queries use their matching composite indexes; substring title/description search scans as expected for a leading-wildcard search.
+- [x] Recorded the current measured limit: the 10,000-request local demo workload does not justify cache, queues, background jobs, or an external search engine. Reassess substring search only if measured latency or data volume becomes a real bottleneck.
+
 ## Last verification
 
 - Date: 2026-10-17
@@ -155,7 +188,13 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - Manual auth: developer confirmed login returns an access token.
 - Tests: `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 75/75 tests after adding cancellation endpoint coverage.
 - SQL Server concurrency test: `dotnet test tests/RequestManagementSystem.SqlServerTests/RequestManagementSystem.SqlServerTests.csproj --no-restore` passes 1/1 using an isolated temporary database.
+- M4.5 request identity: `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj --no-restore` succeeds and `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj --no-restore` passes 75/75 on 2026-10-17.
+- M4.5 list queries: filtered `RequestsApiTests` pass 26/26 and the full standard suite passes 82/82 on 2026-10-17.
+- M4.5 pagination: filtered `RequestsApiTests` pass 27/27 and the full standard suite passes 83/83 on 2026-10-17.
+- M4.5 indexes: developer confirmed `AddRequestListIndexes` was applied to local SQL Server; the full standard suite passes 83/83 afterward.
+- M4.5 demo data: developer confirmed 10,000 requests and 17,500 histories in local SQL Server; automated seeder coverage passes and the full standard suite passes 84/84.
+- M4.5 query plans: developer confirmed the expected execution-plan operators for Employee ownership, Manager status filtering, and substring search. The Employee checks reported about 50–52 logical reads with zero physical reads.
 
 ## Next single task
 
-Start M5 with the smallest frontend bootstrap task: create the React + TypeScript + Vite application only after developer confirmation.
+Review and commit the completed M4.5 backend work before starting the first M5 React task.

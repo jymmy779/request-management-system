@@ -14,9 +14,10 @@ public class RequestService
         _context = context;
     }
 
-    public async Task<List<RequestResponseDto>> GetAllAsync(
+    public async Task<PagedResult<RequestResponseDto>> GetAllAsync(
         string requesterId,
-        bool canViewAll)
+        bool canViewAll,
+        RequestQueryParameters parameters)
     {
         var query = _context.Requests.AsNoTracking();
 
@@ -26,7 +27,60 @@ public class RequestService
                 request => request.RequesterId == requesterId);
         }
 
-        return await query
+        if (!string.IsNullOrWhiteSpace(parameters.Search))
+        {
+            var search = parameters.Search.Trim();
+
+            query = query.Where(
+                request =>
+                    request.Title.Contains(search) ||
+                    request.Description.Contains(search));
+        }
+
+        if (parameters.Status is not null)
+        {
+            query = query.Where(
+                request => request.Status == parameters.Status);
+        }
+
+        if (parameters.Category is not null)
+        {
+            query = query.Where(
+                request => request.Category == parameters.Category);
+        }
+
+        var totalCount = await query.CountAsync();
+
+        query = (parameters.SortBy, parameters.SortDirection) switch
+        {
+            ("title", "asc") =>
+                query.OrderBy(request => request.Title)
+                    .ThenBy(request => request.Id),
+
+            ("title", "desc") =>
+                query.OrderByDescending(request => request.Title)
+                    .ThenByDescending(request => request.Id),
+
+            ("status", "asc") =>
+                query.OrderBy(request => request.Status)
+                    .ThenBy(request => request.Id),
+
+            ("status", "desc") =>
+                query.OrderByDescending(request => request.Status)
+                    .ThenByDescending(request => request.Id),
+
+            ("createdAt", "asc") =>
+                query.OrderBy(request => request.CreatedAt)
+                    .ThenBy(request => request.Id),
+
+            _ =>
+                query.OrderByDescending(request => request.CreatedAt)
+                    .ThenByDescending(request => request.Id)
+        };
+
+        var items = await query
+            .Skip((parameters.Page - 1) * parameters.PageSize)
+            .Take(parameters.PageSize)
             .Select(request => new RequestResponseDto
             {
                 Id = request.Id,
@@ -35,9 +89,21 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             })
             .ToListAsync();
+
+        return new PagedResult<RequestResponseDto>
+        {
+            Items = items,
+            Page = parameters.Page,
+            PageSize = parameters.PageSize,
+            TotalCount = totalCount,
+            TotalPages = (int)Math.Ceiling(
+                totalCount / (double)parameters.PageSize)
+        };
     }
 
     public async Task<RequestResponseDto> CreateAsync(
@@ -45,6 +111,16 @@ public class RequestService
         string requesterId)
     {
         var now = DateTime.UtcNow;
+
+        var requester = await _context.Users
+            .AsNoTracking()
+            .Where(user => user.Id == requesterId)
+            .Select(user => new
+            {
+                user.FullName,
+                user.Email
+            })
+            .SingleAsync();
 
         var request = new Request
         {
@@ -74,6 +150,8 @@ public class RequestService
             Category = request.Category,
             Status = request.Status,
             RequesterId = request.RequesterId,
+            RequesterFullName = requester.FullName,
+            RequesterEmail = requester.Email ?? string.Empty,
             CreatedAt = request.CreatedAt
         };
     }
@@ -102,6 +180,8 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             })
             .SingleOrDefaultAsync();
@@ -139,6 +219,8 @@ public class RequestService
                 FromStatus = history.FromStatus,
                 ToStatus = history.ToStatus,
                 ChangedByUserId = history.ChangedByUserId,
+                ChangedByFullName = history.ChangedByUser.FullName,
+                ChangedByEmail = history.ChangedByUser.Email ?? string.Empty,
                 Note = history.Note,
                 ChangedAt = history.ChangedAt
             })
@@ -150,6 +232,7 @@ public class RequestService
         string actorUserId)
     {
         var request = await _context.Requests
+            .Include(request => request.Requester)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -209,6 +292,8 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             }
         };
@@ -220,6 +305,7 @@ public class RequestService
         RejectRequestDto dto)
     {
         var request = await _context.Requests
+            .Include(request => request.Requester)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -280,6 +366,8 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             }
         };
@@ -290,6 +378,7 @@ public class RequestService
         string actorUserId)
     {
         var request = await _context.Requests
+            .Include(request => request.Requester)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -341,6 +430,8 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             }
         };
@@ -351,6 +442,7 @@ public class RequestService
         string actorUserId)
     {
         var request = await _context.Requests
+            .Include(request => request.Requester)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -410,6 +502,8 @@ public class RequestService
                 Category = request.Category,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
                 CreatedAt = request.CreatedAt
             }
         };

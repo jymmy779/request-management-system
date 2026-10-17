@@ -174,6 +174,11 @@ namespace RequestManagementSystem.Api.Data.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -251,7 +256,8 @@ namespace RequestManagementSystem.Api.Data.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -259,7 +265,11 @@ namespace RequestManagementSystem.Api.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("RequesterId");
+                    b.HasIndex("CreatedAt", "Id");
+
+                    b.HasIndex("RequesterId", "CreatedAt", "Id");
+
+                    b.HasIndex("Status", "CreatedAt", "Id");
 
                     b.ToTable("Requests");
                 });

@@ -75,7 +75,13 @@ Tạo/cập nhật database từ các EF Core migrations đã có trong repo:
 dotnet ef database update --project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj --startup-project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj
 ```
 
-Database mới sẽ chưa có request demo. Project không tự động seed dữ liệu; có thể thêm dữ liệu giả local khi cần và không commit dữ liệu thật.
+Database mới sẽ chưa có request demo. Project không tự động seed request khi API khởi động. Sau khi ba demo user đã tồn tại, có thể chủ động tạo dữ liệu giả local bằng:
+
+```powershell
+dotnet run --project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj -- --seed-demo-data 10000
+```
+
+Seeder ghi theo batch, tạo history phù hợp với status và bỏ qua nếu dữ liệu `[DEMO-LOAD]` đã tồn tại. Số lượng cho phép từ 1 đến 50.000; dữ liệu SQL Server local không được commit vào Git.
 
 ## Chạy API hiện có
 

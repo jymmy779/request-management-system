@@ -20,7 +20,8 @@ public class RequestsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll(
+    [FromQuery] RequestQueryParameters parameters)
     {
         var userId =
             User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -36,7 +37,8 @@ public class RequestsController : ControllerBase
 
         var requests = await _requestService.GetAllAsync(
             userId,
-            canViewAll);
+            canViewAll,
+            parameters);
 
         return Ok(requests);
     }

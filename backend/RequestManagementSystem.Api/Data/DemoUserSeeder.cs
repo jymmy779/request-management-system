@@ -44,6 +44,10 @@ public static class DemoUserSeeder
             ?? throw new InvalidOperationException(
                 $"Demo {role} password not found.");
 
+        var fullName =
+            configuration[$"DemoUsers:{role}:FullName"]
+            ?? $"Demo {role}";
+
         var user = await userManager.FindByEmailAsync(email);
 
         if (user is null)
@@ -52,7 +56,8 @@ public static class DemoUserSeeder
             {
                 UserName = email,
                 Email = email,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                FullName = fullName
             };
 
             var createResult =
@@ -67,6 +72,19 @@ public static class DemoUserSeeder
 
                 throw new InvalidOperationException(
                     $"Could not create demo {role}: {errors}");
+            }
+        }
+        else if (user.FullName != fullName)
+        {
+            user.FullName = fullName;
+
+            var updateResult =
+                await userManager.UpdateAsync(user);
+
+            if (!updateResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Could not update demo {role}.");
             }
         }
 

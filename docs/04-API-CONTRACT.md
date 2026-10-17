@@ -16,7 +16,7 @@ Không mở public signup trong MVP; demo accounts tạo bằng dev seed. Không
 
 | Method | Route | Quyền | Ý nghĩa |
 |---|---|---|---|
-| GET | `/api/requests` | Authenticated | Employee: của mình; Manager/Admin: tất cả |
+| GET | `/api/requests` | Authenticated | Danh sách phân trang; Employee: của mình; Manager/Admin: tất cả |
 | GET | `/api/requests/{id}` | Owner / Manager / Admin | Chi tiết |
 | POST | `/api/requests` | Authenticated | Tạo Pending |
 | POST | `/api/requests/{id}/cancel` | Owner | Chỉ từ Pending |
@@ -82,9 +82,37 @@ Body có thể để trống `{}`. Response: `200 OK` với request mới hoặc
 
 Dùng `ProblemDetails` của ASP.NET Core cho errors. **Không trả HTTP 200 kèm thông báo lỗi**.
 
-## Pagination/filter (sau core)
+## Request list query
 
-Nếu danh sách dài, `GET /api/requests?page=1&pageSize=20&status=Pending`. Giới hạn page size, default sort `createdAt DESC`. Chưa cần ở API mẫu hiện tại.
+`GET /api/requests` hỗ trợ:
+
+- `page`: mặc định `1`, nhỏ nhất `1`.
+- `pageSize`: mặc định `20`, từ `1` đến `100`.
+- `search`: tối đa 100 ký tự, tìm trong title và description.
+- `status`: `Pending`, `Approved`, `Rejected`, `Completed`, `Cancelled`.
+- `category`: `Equipment`, `Software`, `Other`.
+- `sortBy`: `createdAt`, `title`, `status`; mặc định `createdAt`.
+- `sortDirection`: `asc` hoặc `desc`; mặc định `desc`.
+
+Ví dụ:
+
+```text
+GET /api/requests?search=monitor&status=Pending&page=2&pageSize=20&sortBy=createdAt&sortDirection=desc
+```
+
+Response `200 OK`:
+
+```json
+{
+  "items": [],
+  "page": 2,
+  "pageSize": 20,
+  "totalCount": 53,
+  "totalPages": 3
+}
+```
+
+Search/filter và `totalCount` luôn được tính sau khi áp dụng quyền xem dữ liệu của user. Query parameter không hợp lệ trả `400 Bad Request`.
 
 ## Manual demo scenario
 

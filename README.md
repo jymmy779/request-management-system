@@ -96,6 +96,22 @@ dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.cs
 
 Integration test của M1 dùng SQLite in-memory với dữ liệu cách ly; test không đọc hoặc thay đổi `RequestManagementSystemDb` trên SQL Server local.
 
+Concurrency test dùng SQL Server thật và tạo một database tạm có tên riêng. Từ PowerShell, lấy connection string local từ User Secrets mà không in giá trị ra màn hình, chạy test, rồi xóa biến môi trường:
+
+```powershell
+$connectionLine = dotnet user-secrets list --project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj |
+  Where-Object { $_ -match '^ConnectionStrings:DefaultConnection = ' } |
+  Select-Object -First 1
+
+$env:RMS_SQLSERVER_TEST_CONNECTION = ($connectionLine -split ' = ', 2)[1]
+
+dotnet test tests/RequestManagementSystem.SqlServerTests/RequestManagementSystem.SqlServerTests.csproj
+
+Remove-Item Env:RMS_SQLSERVER_TEST_CONNECTION
+```
+
+Test này không dùng hoặc xóa `RequestManagementSystemDb`; database tạm có tiền tố `RequestManagementSystemConcurrencyTests_` và được xóa trong `finally`.
+
 ## Quy tắc làm việc
 
 1. **Mỗi lần một nhiệm vụ nhỏ**; không yêu cầu Codex xây toàn bộ phần mềm trong một prompt.

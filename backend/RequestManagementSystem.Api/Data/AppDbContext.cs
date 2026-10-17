@@ -13,6 +13,9 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
 
     public DbSet<Request> Requests => Set<Request>();
 
+    public DbSet<RequestStatusHistory> RequestStatusHistories =>
+        Set<RequestStatusHistory>();
+
     protected override void OnModelCreating(
         ModelBuilder builder)
     {
@@ -23,5 +26,36 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .WithMany()
             .HasForeignKey(request => request.RequesterId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        if (Database.IsSqlServer())
+        {
+            builder.Entity<Request>()
+                .Property(request => request.RowVersion)
+                .IsRowVersion();
+        }
+
+        builder.Entity<RequestStatusHistory>()
+            .HasOne(history => history.Request)
+            .WithMany(request => request.StatusHistory)
+            .HasForeignKey(history => history.RequestId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<RequestStatusHistory>()
+            .HasOne(history => history.ChangedByUser)
+            .WithMany()
+            .HasForeignKey(history => history.ChangedByUserId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<RequestStatusHistory>()
+            .Property(history => history.Note)
+            .HasMaxLength(500);
+
+        builder.Entity<RequestStatusHistory>()
+            .Property(history => history.FromStatus)
+            .HasMaxLength(50);
+
+        builder.Entity<RequestStatusHistory>()
+            .Property(history => history.ToStatus)
+            .HasMaxLength(50);
     }
 }

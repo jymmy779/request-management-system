@@ -69,6 +69,34 @@ public class RequestsController : ControllerBase
         return Ok(request);
     }
 
+    [HttpGet("{id:int}/history")]
+    public async Task<IActionResult> GetHistory(int id)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var canViewAll =
+            User.IsInRole(AppRoles.Manager) ||
+            User.IsInRole(AppRoles.Admin);
+
+        var history = await _requestService.GetHistoryAsync(
+            id,
+            userId,
+            canViewAll);
+
+        if (history is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(history);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(
         CreateRequestDto dto)
@@ -88,5 +116,122 @@ public class RequestsController : ControllerBase
         return Created(
             $"/api/requests/{request.Id}",
             request);
+    }
+
+    [HttpPost("{id:int}/approve")]
+    [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
+    public async Task<IActionResult> Approve(int id)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _requestService.ApproveAsync(
+            id,
+            userId);
+
+        return result.Outcome switch
+        {
+            RequestTransitionOutcome.Success => Ok(result.Request),
+            RequestTransitionOutcome.NotFound => NotFound(),
+            RequestTransitionOutcome.Forbidden => Forbid(),
+            RequestTransitionOutcome.Conflict => Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Invalid request state",
+                detail: "Only a Pending request can be approved."),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
+
+    [HttpPost("{id:int}/reject")]
+    [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
+    public async Task<IActionResult> Reject(
+        int id,
+        RejectRequestDto dto)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _requestService.RejectAsync(
+            id,
+            userId,
+            dto);
+
+        return result.Outcome switch
+        {
+            RequestTransitionOutcome.Success => Ok(result.Request),
+            RequestTransitionOutcome.NotFound => NotFound(),
+            RequestTransitionOutcome.Forbidden => Forbid(),
+            RequestTransitionOutcome.Conflict => Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Invalid request state",
+                detail: "Only a Pending request can be rejected."),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
+
+    [HttpPost("{id:int}/complete")]
+    [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
+    public async Task<IActionResult> Complete(int id)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _requestService.CompleteAsync(
+            id,
+            userId);
+
+        return result.Outcome switch
+        {
+            RequestTransitionOutcome.Success => Ok(result.Request),
+            RequestTransitionOutcome.NotFound => NotFound(),
+            RequestTransitionOutcome.Conflict => Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Invalid request state",
+                detail: "Only an Approved request can be completed."),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
+
+    [HttpPost("{id:int}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _requestService.CancelAsync(
+            id,
+            userId);
+
+        return result.Outcome switch
+        {
+            RequestTransitionOutcome.Success => Ok(result.Request),
+            RequestTransitionOutcome.NotFound => NotFound(),
+            RequestTransitionOutcome.Forbidden => Forbid(),
+            RequestTransitionOutcome.Conflict => Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Invalid request state",
+                detail: "Only a Pending request can be cancelled."),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
     }
 }

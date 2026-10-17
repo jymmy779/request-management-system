@@ -1,6 +1,6 @@
 # 09 — Current Project Status (living document)
 
-**Last updated:** 2026-10-16  
+**Last updated:** 2026-10-17
 **Source of truth:** Actual repository, verified commands, and developer confirmation.
 
 ## Goal
@@ -63,7 +63,7 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - `ManagerOrAdmin` is reserved for approval workflow endpoints introduced in M4; M2 does not add a placeholder endpoint solely to exercise this policy.
 - M2 acceptance criteria are complete: all three demo roles can authenticate, request visibility follows ownership and role, and 401/403 behavior is covered by integration tests.
 
-## Latest completed milestone
+## Completed milestone
 
 **M3 — Create/detail and validation. Complete.**
 
@@ -92,9 +92,54 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - Request history is intentionally deferred to the complete audit implementation in M4, as allowed by the milestone plan.
 - The full integration suite passes 20/20 tests.
 
-## Current milestone
+## Latest completed milestone
 
-**M4 — Approval workflow and audit. Not started.**
+**M4 — Approval workflow and audit. Complete.**
+
+### M4 verified progress
+
+- [x] Added `RequestStatuses` constants for Pending, Approved, Rejected, Completed, and Cancelled.
+- [x] Replaced raw request-status strings in application code and tests; no migration was required because persisted values did not change.
+- [x] Added a database-independent `RequestStateMachine` covering the four allowed transitions.
+- [x] Added unit tests for valid and invalid transitions: 9/9 state-machine cases pass.
+- [x] Full suite remains green: 29/29 tests on 2026-10-17.
+- [x] Added `RequestStatusHistory` with request/actor foreign keys, UTC timestamp, optional note, and restrictive delete behavior.
+- [x] Added the `Request.StatusHistory` navigation and `AppDbContext.RequestStatusHistories` set.
+- [x] Generated, reviewed, and applied the `AddRequestStatusHistory` migration to local SQL Server.
+- [x] Request creation now writes the initial `null -> Pending` audit entry in the same `SaveChangesAsync()` transaction.
+- [x] Creation tests verify both request and history persistence; invalid inputs persist neither.
+- [x] Added `RequestStatusHistoryResponseDto` and ownership-aware, chronologically ordered history queries.
+- [x] Added `GET /api/requests/{id}/history`, returning 200 for visible requests and 404 when hidden or missing.
+- [x] Added integration coverage for history ownership, Manager/Admin visibility, missing IDs, and chronological ordering.
+- [x] Added service-layer `ApproveAsync()` with state validation, self-approval prevention, atomic history persistence, and explicit transition outcomes.
+- [x] Added service tests for successful approval, self-approval denial, repeat-approval conflict, missing requests, and audit persistence.
+- [x] Added `POST /api/requests/{id}/approve` with `ManagerOrAdmin` authorization and 200/403/404/409 outcome mapping.
+- [x] Added approval endpoint integration coverage for Employee denial, Manager/Admin success, self-approval denial, missing requests, repeat-approval conflict, and audit persistence.
+- [x] Added `RejectRequestDto` with a required rejection reason of 5–500 characters.
+- [x] Added service-layer `RejectAsync()` with state validation, self-rejection prevention, rejection reason audit persistence, and explicit transition outcomes.
+- [x] Added service tests for successful rejection, self-rejection denial, invalid-state conflict, missing requests, and rejection audit persistence.
+- [x] Added `POST /api/requests/{id}/reject` with DTO validation, `ManagerOrAdmin` authorization, and 200/403/404/409 outcome mapping.
+- [x] Added rejection endpoint integration coverage for reason validation, Employee denial, Manager/Admin success, self-rejection denial, missing requests, invalid-state conflict, and audit persistence.
+- [x] Added service-layer `CompleteAsync()` for the `Approved -> Completed` transition with state validation, audit persistence, and explicit transition outcomes.
+- [x] Added service tests for successful completion, Pending-state conflict, missing requests, and the full Pending/Approved/Completed history sequence.
+- [x] Added `POST /api/requests/{id}/complete` with `ManagerOrAdmin` authorization and 200/404/409 outcome mapping.
+- [x] Added completion endpoint integration coverage for Employee denial, Manager/Admin success, missing requests, Pending-state conflict, and audit persistence.
+- [x] Added service-layer `CancelAsync()` so only the request owner can transition `Pending -> Cancelled`, with state validation and audit persistence.
+- [x] Added service tests for successful cancellation, non-owner denial, Approved-state conflict, missing requests, and audit persistence.
+- [x] Added `POST /api/requests/{id}/cancel`, using JWT ownership checks and 200/403/404/409 outcome mapping.
+- [x] Added cancellation endpoint integration coverage for owner success, Employee/Manager/Admin non-owner denial, missing requests, Approved-state conflict, and audit persistence.
+- [x] Added `Request.RowVersion` and configured it as a SQL Server-generated optimistic concurrency token.
+- [x] Generated and applied the `AddRequestRowVersion` migration to local SQL Server; SQLite remains a fast non-concurrency test provider.
+- [x] Request transitions now catch `DbUpdateConcurrencyException` and return the existing Conflict outcome; EF Core rolls back the status and audit write together.
+- [x] Added a separate SQL Server concurrency test project that uses an isolated temporary database.
+- [x] Verified two managers approving the same `RowVersion` produce one success, one conflict, and exactly one approval audit entry.
+
+### M4 completion note
+
+- All Pending/Approved/Rejected/Completed/Cancelled transitions and their permissions are implemented.
+- Audit history records actor, timestamp, previous status, target status, and rejection reason where applicable.
+- Optimistic concurrency is verified against SQL Server rather than inferred from SQLite behavior.
+- M4 acceptance criteria are complete.
 
 ## Known technical debt
 
@@ -102,12 +147,15 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 
 ## Last verification
 
-- Date: 2026-10-16
-- API build: developer confirmed `dotnet build backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj` succeeded after extending the demo-user seeder.
+- Date: 2026-10-17
+- Build: `dotnet build tests/RequestManagementSystem.SqlServerTests/RequestManagementSystem.SqlServerTests.csproj` succeeds after the M4 concurrency implementation (0 errors; known package warnings remain).
 - Database: developer confirmed Employee, Manager, and Admin demo users exist and each has the correct role in local SQL Server.
+- Audit database: `AddRequestStatusHistory` was applied successfully to local SQL Server on 2026-10-17.
+- Concurrency database: `AddRequestRowVersion` was applied successfully to local SQL Server on 2026-10-17.
 - Manual auth: developer confirmed login returns an access token.
-- Tests: `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 20/20 tests after adding request-detail authorization and not-found coverage.
+- Tests: `dotnet test tests/RequestManagementSystem.Tests/RequestManagementSystem.Tests.csproj` passes 75/75 tests after adding cancellation endpoint coverage.
+- SQL Server concurrency test: `dotnet test tests/RequestManagementSystem.SqlServerTests/RequestManagementSystem.SqlServerTests.csproj --no-restore` passes 1/1 using an isolated temporary database.
 
 ## Next single task
 
-Start M4 by defining the five request status constants and replacing the existing raw `Pending` strings; do not implement transitions yet.
+Start M5 with the smallest frontend bootstrap task: create the React + TypeScript + Vite application only after developer confirmation.

@@ -74,7 +74,7 @@ public class RequestsApiTests
             {
                 Title = "Request a monitor",
                 Description = "Need a second monitor.",
-                Status = "Pending",
+                Status = RequestStatuses.Pending,
                 RequesterId = currentUser.Id,
                 CreatedAt = new DateTime(
                     2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
@@ -83,7 +83,7 @@ public class RequestsApiTests
             {
                 Title = "Request a keyboard",
                 Description = "Current keyboard is broken.",
-                Status = "Approved",
+                Status = RequestStatuses.Approved,
                 RequesterId = currentUser.Id,
                 CreatedAt = new DateTime(
                     2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)
@@ -92,7 +92,7 @@ public class RequestsApiTests
             {
                 Title = "Other employee request",
                 Description = "This request must not be visible.",
-                Status = "Pending",
+                Status = RequestStatuses.Pending,
                 RequesterId = otherUser.Id,
                 CreatedAt = new DateTime(
                 2026, 1, 3, 0, 0, 0, DateTimeKind.Utc)
@@ -221,7 +221,7 @@ public class RequestsApiTests
 
         Assert.NotNull(createdRequest);
         Assert.Equal(employee.Id, createdRequest.RequesterId);
-        Assert.Equal("Pending", createdRequest.Status);
+        Assert.Equal(RequestStatuses.Pending, createdRequest.Status);
         Assert.Equal(RequestCategories.Equipment, createdRequest.Category);
         Assert.Equal(
             $"/api/requests/{createdRequest.Id}",
@@ -234,6 +234,16 @@ public class RequestsApiTests
         Assert.Equal(createdRequest.Id, savedRequest.Id);
         Assert.Equal(employee.Id, savedRequest.RequesterId);
         Assert.Equal(dto.Title, savedRequest.Title);
+
+        var savedHistory = await dbContext.RequestStatusHistories
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(savedRequest.Id, savedHistory.RequestId);
+        Assert.Null(savedHistory.FromStatus);
+        Assert.Equal(RequestStatuses.Pending, savedHistory.ToStatus);
+        Assert.Equal(employee.Id, savedHistory.ChangedByUserId);
+        Assert.Equal(savedRequest.CreatedAt, savedHistory.ChangedAt);
     }
 
     [Theory]
@@ -303,6 +313,11 @@ public class RequestsApiTests
 
         Assert.Empty(
             await dbContext.Requests
+                .AsNoTracking()
+                .ToListAsync());
+
+        Assert.Empty(
+            await dbContext.RequestStatusHistories
                 .AsNoTracking()
                 .ToListAsync());
     }
@@ -426,6 +441,142 @@ public class RequestsApiTests
 
         var response = await client.GetAsync(
             "/api/requests/999999");
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(AppRoles.Employee, true, HttpStatusCode.OK)]
+    [InlineData(AppRoles.Employee, false, HttpStatusCode.NotFound)]
+    [InlineData(AppRoles.Manager, false, HttpStatusCode.OK)]
+    [InlineData(AppRoles.Admin, false, HttpStatusCode.OK)]
+    public async Task GetHistory_EnforcesAccessAndReturnsChronologicalEntries(
+        string role,
+        bool isOwner,
+        HttpStatusCode expectedStatusCode)
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var owner = new ApplicationUser
+        {
+            UserName = "history-owner@test.local",
+            Email = "history-owner@test.local",
+            EmailConfirmed = true
+        };
+
+        var caller = isOwner
+            ? owner
+            : new ApplicationUser
+            {
+                UserName = "history-caller@test.local",
+                Email = "history-caller@test.local",
+                EmailConfirmed = true
+            };
+
+        dbContext.Users.Add(owner);
+
+        if (!isOwner)
+        {
+            dbContext.Users.Add(caller);
+        }
+
+        var request = new RequestModel
+        {
+            Title = "History test request",
+            Description = "This request has multiple history entries.",
+            Category = RequestCategories.Other,
+            Status = RequestStatuses.Approved,
+            RequesterId = owner.Id
+        };
+
+        request.StatusHistory.Add(new RequestStatusHistory
+        {
+            FromStatus = RequestStatuses.Pending,
+            ToStatus = RequestStatuses.Approved,
+            ChangedByUserId = owner.Id,
+            ChangedAt = new DateTime(
+                2026, 1, 2, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        request.StatusHistory.Add(new RequestStatusHistory
+        {
+            FromStatus = null,
+            ToStatus = RequestStatuses.Pending,
+            ChangedByUserId = owner.Id,
+            ChangedAt = new DateTime(
+                2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+        });
+
+        dbContext.Requests.Add(request);
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            caller,
+            new[] { role });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var response = await client.GetAsync(
+            $"/api/requests/{request.Id}/history");
+
+        Assert.Equal(expectedStatusCode, response.StatusCode);
+
+        if (expectedStatusCode == HttpStatusCode.OK)
+        {
+            var history = await response.Content
+                .ReadFromJsonAsync<List<RequestStatusHistoryResponseDto>>();
+
+            Assert.NotNull(history);
+            Assert.Equal(2, history.Count);
+            Assert.Equal(RequestStatuses.Pending, history[0].ToStatus);
+            Assert.Equal(RequestStatuses.Approved, history[1].ToStatus);
+        }
+    }
+
+    [Fact]
+    public async Task GetHistory_WithMissingId_ReturnsNotFound()
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var employee = new ApplicationUser
+        {
+            UserName = "history-employee@test.local",
+            Email = "history-employee@test.local",
+            EmailConfirmed = true
+        };
+
+        var accessToken = tokenService.CreateToken(
+            employee,
+            new[] { AppRoles.Employee });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        var response = await client.GetAsync(
+            "/api/requests/999999/history");
 
         Assert.Equal(
             HttpStatusCode.NotFound,

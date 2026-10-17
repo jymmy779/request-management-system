@@ -10,11 +10,16 @@ public class Request
 
     public string Category { get; set; } = RequestCategories.Other;
 
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = RequestStatuses.Pending;
 
     public string RequesterId { get; set; } = string.Empty;
 
     public ApplicationUser Requester { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    public byte[] RowVersion { get; set; } = Array.Empty<byte>();
+
+    public ICollection<RequestStatusHistory> StatusHistory { get; set; } =
+        new List<RequestStatusHistory>();
 }

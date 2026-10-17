@@ -128,12 +128,85 @@ public static class DemoRequestSeeder
         return requestCount;
     }
 
+    public static async Task<int> BackfillAsync(AppDbContext context)
+    {
+        var updatedCount = 0;
+        var lastRequestId = 0;
+
+        await using var transaction =
+            await context.Database.BeginTransactionAsync();
+
+        while (true)
+        {
+            var requests = await context.Requests
+                .Where(request =>
+                    request.Id > lastRequestId &&
+                    request.Title.StartsWith(DemoTitlePrefix))
+                .OrderBy(request => request.Id)
+                .Take(BatchSize)
+                .Include(request => request.StatusHistory)
+                .ToListAsync();
+
+            if (requests.Count == 0)
+            {
+                break;
+            }
+
+            foreach (var request in requests)
+            {
+                lastRequestId = request.Id;
+
+                if (!TryGetDemoNumber(request.Title, out var number))
+                {
+                    continue;
+                }
+
+                var priority = GetPriority(number);
+                var quantity = ((number - 1) % 5) + 1;
+                var estimatedCost = GetEstimatedCost(
+                    request.Category,
+                    quantity,
+                    number);
+                var updatedAt = request.Status == RequestStatuses.Pending
+                    ? null
+                    : request.StatusHistory
+                        .OrderBy(history => history.ChangedAt)
+                        .ThenBy(history => history.Id)
+                        .Select(history => (DateTime?)history.ChangedAt)
+                        .LastOrDefault();
+
+                if (request.Priority == priority &&
+                    request.Quantity == quantity &&
+                    request.EstimatedCost == estimatedCost &&
+                    request.UpdatedAt == updatedAt)
+                {
+                    continue;
+                }
+
+                request.Priority = priority;
+                request.Quantity = quantity;
+                request.EstimatedCost = estimatedCost;
+                request.UpdatedAt = updatedAt;
+                updatedCount++;
+            }
+
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+        }
+
+        await transaction.CommitAsync();
+
+        return updatedCount;
+    }
+
     private static Request CreateRequest(
         int number,
         string ownerId,
         string actorId)
     {
         var status = GetStatus(number);
+        var category = Categories[(number - 1) % Categories.Length];
+        var quantity = ((number - 1) % 5) + 1;
 
         var createdAt = DateTime.UtcNow
             .AddDays(-1)
@@ -146,8 +219,13 @@ public static class DemoRequestSeeder
                 Titles[(number - 1) % Titles.Length],
             Description =
                 $"Generated demo request number {number}.",
-            Category =
-                Categories[(number - 1) % Categories.Length],
+            Category = category,
+            Priority = GetPriority(number),
+            Quantity = quantity,
+            EstimatedCost = GetEstimatedCost(
+                category,
+                quantity,
+                number),
             Status = status,
             RequesterId = ownerId,
             CreatedAt = createdAt
@@ -185,6 +263,8 @@ public static class DemoRequestSeeder
 
         if (status == RequestStatuses.Completed)
         {
+            request.UpdatedAt = createdAt.AddMinutes(20);
+
             request.StatusHistory.Add(new RequestStatusHistory
             {
                 FromStatus = RequestStatuses.Pending,
@@ -203,6 +283,8 @@ public static class DemoRequestSeeder
 
             return;
         }
+
+        request.UpdatedAt = createdAt.AddMinutes(10);
 
         request.StatusHistory.Add(new RequestStatusHistory
         {
@@ -230,6 +312,56 @@ public static class DemoRequestSeeder
             <= 18 => RequestStatuses.Completed,
             _ => RequestStatuses.Cancelled
         };
+    }
+
+    private static string GetPriority(int number)
+    {
+        return (number % 10) switch
+        {
+            <= 2 => RequestPriorities.High,
+            <= 6 => RequestPriorities.Medium,
+            _ => RequestPriorities.Low
+        };
+    }
+
+    private static decimal? GetEstimatedCost(
+        string category,
+        int quantity,
+        int number)
+    {
+        return category switch
+        {
+            RequestCategories.Equipment => 2_500_000m * quantity,
+            RequestCategories.Software => 1_200_000m * quantity,
+            RequestCategories.Other when number % 2 == 0 =>
+                500_000m * quantity,
+            _ => null
+        };
+    }
+
+    private static bool TryGetDemoNumber(
+        string title,
+        out int number)
+    {
+        number = 0;
+
+        var numberStart = DemoTitlePrefix.Length + 1;
+
+        if (title.Length <= numberStart)
+        {
+            return false;
+        }
+
+        var separatorIndex = title.IndexOf(
+            " - ",
+            numberStart,
+            StringComparison.Ordinal);
+
+        return separatorIndex > numberStart &&
+            int.TryParse(
+                title[numberStart..separatorIndex],
+                out number) &&
+            number > 0;
     }
 
     private static string GetDemoEmail(

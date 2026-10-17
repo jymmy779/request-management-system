@@ -378,12 +378,19 @@ public class RequestsApiTests
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
 
+        var department = new Department
+        {
+            Code = "IT",
+            Name = "Information Technology"
+        };
+
         var employee = new ApplicationUser
         {
             UserName = "employee@test.local",
             Email = "employee@test.local",
             EmailConfirmed = true,
-            FullName = "Demo Employee"
+            FullName = "Demo Employee",
+            Department = department
         };
 
         dbContext.Users.Add(employee);
@@ -405,7 +412,10 @@ public class RequestsApiTests
         {
             Title = "Request a new monitor",
             Description = "A second monitor is needed for development work.",
-            Category = RequestCategories.Equipment
+            Category = RequestCategories.Equipment,
+            Priority = RequestPriorities.High,
+            Quantity = 3,
+            EstimatedCost = 18_000_000m
         };
 
         var response = await client.PostAsJsonAsync(
@@ -421,8 +431,13 @@ public class RequestsApiTests
         Assert.Equal(employee.Id, createdRequest.RequesterId);
         Assert.Equal(employee.FullName, createdRequest.RequesterFullName);
         Assert.Equal(employee.Email, createdRequest.RequesterEmail);
+        Assert.Equal(department.Name, createdRequest.RequesterDepartmentName);
         Assert.Equal(RequestStatuses.Pending, createdRequest.Status);
         Assert.Equal(RequestCategories.Equipment, createdRequest.Category);
+        Assert.Equal(RequestPriorities.High, createdRequest.Priority);
+        Assert.Equal(3, createdRequest.Quantity);
+        Assert.Equal(18_000_000m, createdRequest.EstimatedCost);
+        Assert.Null(createdRequest.UpdatedAt);
         Assert.Equal(
             $"/api/requests/{createdRequest.Id}",
             response.Headers.Location?.ToString());
@@ -434,6 +449,10 @@ public class RequestsApiTests
         Assert.Equal(createdRequest.Id, savedRequest.Id);
         Assert.Equal(employee.Id, savedRequest.RequesterId);
         Assert.Equal(dto.Title, savedRequest.Title);
+        Assert.Equal(RequestPriorities.High, savedRequest.Priority);
+        Assert.Equal(3, savedRequest.Quantity);
+        Assert.Equal(18_000_000m, savedRequest.EstimatedCost);
+        Assert.Null(savedRequest.UpdatedAt);
 
         var savedHistory = await dbContext.RequestStatusHistories
             .AsNoTracking()
@@ -450,19 +469,52 @@ public class RequestsApiTests
     [InlineData(
         "Bad",
         "This description is long enough.",
-        RequestCategories.Equipment)]
+        RequestCategories.Equipment,
+        RequestPriorities.Medium,
+        1,
+        1000)]
     [InlineData(
         "A valid title",
         "Too short",
-        RequestCategories.Software)]
+        RequestCategories.Software,
+        RequestPriorities.Medium,
+        1,
+        1000)]
     [InlineData(
         "A valid title",
         "This description is long enough.",
-        "Invalid category")]
+        "Invalid category",
+        RequestPriorities.Medium,
+        1,
+        1000)]
+    [InlineData(
+        "A valid title",
+        "This description is long enough.",
+        RequestCategories.Other,
+        "Urgent",
+        1,
+        1000)]
+    [InlineData(
+        "A valid title",
+        "This description is long enough.",
+        RequestCategories.Equipment,
+        RequestPriorities.Medium,
+        0,
+        1000)]
+    [InlineData(
+        "A valid title",
+        "This description is long enough.",
+        RequestCategories.Equipment,
+        RequestPriorities.Medium,
+        1,
+        -1)]
     public async Task Create_WithInvalidInput_ReturnsBadRequestAndDoesNotPersist(
         string title,
         string description,
-        string category)
+        string category,
+        string priority,
+        int quantity,
+        int estimatedCost)
     {
         var client = _factory.CreateClient();
 
@@ -500,7 +552,10 @@ public class RequestsApiTests
         {
             Title = title,
             Description = description,
-            Category = category
+            Category = category,
+            Priority = priority,
+            Quantity = quantity,
+            EstimatedCost = estimatedCost
         };
 
         var response = await client.PostAsJsonAsync(
@@ -542,12 +597,19 @@ public class RequestsApiTests
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
 
+        var department = new Department
+        {
+            Code = "IT",
+            Name = "Information Technology"
+        };
+
         var owner = new ApplicationUser
         {
             UserName = "owner@test.local",
             Email = "owner@test.local",
             EmailConfirmed = true,
-            FullName = "Request Owner"
+            FullName = "Request Owner",
+            Department = department
         };
 
         var caller = isOwner
@@ -604,6 +666,7 @@ public class RequestsApiTests
             Assert.Equal(owner.Id, responseDto.RequesterId);
             Assert.Equal(owner.FullName, responseDto.RequesterFullName);
             Assert.Equal(owner.Email, responseDto.RequesterEmail);
+            Assert.Equal(department.Name, responseDto.RequesterDepartmentName);
         }
     }
 

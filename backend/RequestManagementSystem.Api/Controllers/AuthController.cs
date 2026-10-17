@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using RequestManagementSystem.Api.Authorization;
 using RequestManagementSystem.Api.DTOs;
 using RequestManagementSystem.Api.Models;
 using RequestManagementSystem.Api.Services;
@@ -24,7 +26,7 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<ActionResult<LoginResponseDto>> Login(
+    public async Task<IActionResult> Login(
         LoginRequestDto loginRequest)
     {
         var user =
@@ -46,10 +48,23 @@ public class AuthController : ControllerBase
         var roles = await _userManager.GetRolesAsync(user);
         var accessToken = _tokenService.CreateToken(user, roles);
 
-        return Ok(new LoginResponseDto
-        {
-            AccessToken = accessToken
-        });
+        Response.Cookies.Append(
+            AuthCookieNames.AccessToken,
+            accessToken,
+            CreateAccessTokenCookieOptions());
+
+        return NoContent();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete(
+            AuthCookieNames.AccessToken,
+            CreateAccessTokenCookieOptions());
+
+        return NoContent();
     }
 
     [Authorize]
@@ -64,6 +79,13 @@ public class AuthController : ControllerBase
         }
 
         var roles = await _userManager.GetRolesAsync(user);
+        var departmentName = await _userManager.Users
+            .AsNoTracking()
+            .Where(item => item.Id == user.Id)
+            .Select(item => item.Department != null
+                ? item.Department.Name
+                : null)
+            .SingleAsync();
 
         return Ok(new CurrentUserResponseDto
         {
@@ -71,8 +93,19 @@ public class AuthController : ControllerBase
             Email = user.Email ?? string.Empty,
             Role = roles.Count > 0
                 ? roles[0]
-                : string.Empty
+                : string.Empty,
+            DepartmentName = departmentName
         });
     }
-}
 
+    private CookieOptions CreateAccessTokenCookieOptions()
+    {
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
+        };
+    }
+}

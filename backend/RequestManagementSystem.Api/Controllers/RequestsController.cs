@@ -120,6 +120,38 @@ public class RequestsController : ControllerBase
             request);
     }
 
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(
+        int id,
+        UpdateRequestDto dto)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _requestService.UpdateAsync(
+            id,
+            userId,
+            dto);
+
+        return result.Outcome switch
+        {
+            RequestUpdateOutcome.Success => Ok(result.Request),
+            RequestUpdateOutcome.NotFound => NotFound(),
+            RequestUpdateOutcome.Forbidden => Forbid(),
+            RequestUpdateOutcome.Conflict => Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Request cannot be edited",
+                detail: "The request is no longer Pending or was changed " +
+                    "by another operation."),
+            _ => StatusCode(StatusCodes.Status500InternalServerError)
+        };
+    }
+
     [HttpPost("{id:int}/approve")]
     [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
     public async Task<IActionResult> Approve(int id)

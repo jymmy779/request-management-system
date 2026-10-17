@@ -25,7 +25,7 @@ Trong bản demo, có thể seed 3 tài khoản giả để diễn tập vai tr�
 ## Use case chính (MVP)
 
 1. Employee đăng nhập.
-2. Tạo yêu cầu với `title`, `description`, `category`.
+2. Tạo yêu cầu với `title`, `description`, `category`, `priority`, `quantity` và tổng chi phí dự kiến tùy chọn.
 3. Hệ thống lưu yêu cầu ở trạng thái `Pending`, gắn `requesterId` từ token.
 4. Manager xem danh sách, mở chi tiết và duyệt hoặc từ chối (từ chối cần lý do).
 5. Nếu Approved, Manager/Admin đánh dấu Completed khi đã xử lý.
@@ -58,8 +58,25 @@ Trong bản demo, có thể seed 3 tài khoản giả để diễn tập vai tr�
 | F07 | Dashboard tối giản theo vai trò | Should |
 | F08 | Quản lý người dùng qua UI | Could |
 | F09 | Thông báo async / microservice | Later |
+| F10 | Tìm kiếm, lọc, sắp xếp và phân trang danh sách yêu cầu | Must |
 
 **Category** MVP: `Equipment`, `Software`, `Other`. Chưa làm quy trình riêng cho từng loại, chưa quản lý tồn kho hay mua sắm thực tế.
+
+## Phạm vi giao diện tham khảo
+
+Thiết kế AdminHub được dùng để định hướng bố cục, màu sắc, sidebar, trang chi tiết và cách trình bày luồng phê duyệt. Thiết kế này **không phải yêu cầu triển khai giống 1:1**.
+
+Trong MVP, frontend tập trung vào:
+
+- Đăng nhập/đăng xuất và khôi phục phiên đăng nhập.
+- Danh sách, tìm kiếm, lọc, sắp xếp và phân trang yêu cầu.
+- Tạo, sửa và xem chi tiết yêu cầu.
+- Hiển thị người gửi, phòng ban, priority, quantity, estimated cost và lịch sử trạng thái.
+- Thao tác approve, reject, complete và cancel theo quyền hiện có.
+- Trang My Approvals và dashboard thống kê tối giản nếu phần luồng chính đã ổn định.
+- Loading, error, empty state và toast phản hồi thao tác.
+
+Sidebar trong thiết kế có thể hiển thị ít mục hơn. Những mục chưa có nghiệp vụ backend không được tạo chỉ để giống ảnh.
 
 ## Non-functional requirements
 
@@ -75,6 +92,9 @@ Trong bản demo, có thể seed 3 tài khoản giả để diễn tập vai tr�
 
 - Payroll, chấm công, HRMS/ERP đầy đủ, kho, mua hàng/thanh toán.
 - Multi-tenant, phân cấp duyệt tùy biến nhiều cấp, workflow designer.
+- Chuỗi duyệt cố định Department → Manager → Director → VP; MVP giữ một bước xử lý bởi Manager/Admin.
+- Vendor, policy, báo cáo/analytics chuyên sâu và các module Purchase/Travel/IT/Finance độc lập.
+- Save draft, request changes, comment thread, attachment và budget center/contract period.
 - App mobile, AI chatbot, push notification, email/SMS thật, external integrations.
 - Kubernetes, distributed tracing hay microservices từ đầu.
 

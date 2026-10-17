@@ -1,4 +1,4 @@
-# 04 — API Contract (planned REST v1)
+# 04 — API Contract
 
 **Base URL:** `/api` • JSON • Property casing: `camelCase` • Timestamp: UTC ISO-8601.  
 **Lưu ý:** Hầu hết endpoint bên dưới **CHƯA được implement**; xem `09-PROJECT-STATUS.md`. `GET /api/requests` hiện có thể đang trả demo data.
@@ -7,10 +7,13 @@
 
 | Method | Route | Quyền | Kết quả |
 |---|---|---|---|
-| POST | `/api/auth/login` | Public | JWT access token + info tối thiểu |
-| GET | `/api/auth/me` | Authenticated | current user: `id`, `email`, `role` |
+| POST | `/api/auth/login` | Public | `204`; backend sets an HttpOnly access-token cookie |
+| POST | `/api/auth/logout` | Public | `204`; backend removes the access-token cookie |
+| GET | `/api/auth/me` | Authenticated | current user: `id`, `email`, `role`, `departmentName` |
 
 Không mở public signup trong MVP; demo accounts tạo bằng dev seed. Không gửi password hash về client.
+
+JWT chỉ được phát hành trong HttpOnly cookie; login không trả access token trong JSON. Browser clients phải gửi requests với credentials. Development dùng `SameSite=Lax`; cookie chỉ gắn `Secure` khi request chạy qua HTTPS.
 
 ## Requests (M1–M4)
 
@@ -19,6 +22,7 @@ Không mở public signup trong MVP; demo accounts tạo bằng dev seed. Không
 | GET | `/api/requests` | Authenticated | Danh sách phân trang; Employee: của mình; Manager/Admin: tất cả |
 | GET | `/api/requests/{id}` | Owner / Manager / Admin | Chi tiết |
 | POST | `/api/requests` | Authenticated | Tạo Pending |
+| PUT | `/api/requests/{id}` | Owner | Sửa nội dung khi còn Pending |
 | POST | `/api/requests/{id}/cancel` | Owner | Chỉ từ Pending |
 | POST | `/api/requests/{id}/approve` | Manager/Admin, not owner | Pending -> Approved |
 | POST | `/api/requests/{id}/reject` | Manager/Admin, not owner | Pending -> Rejected |
@@ -35,7 +39,10 @@ Request:
 {
   "title": "Request a new monitor",
   "description": "A second monitor is needed for development work.",
-  "category": "Equipment"
+  "category": "Equipment",
+  "priority": "High",
+  "quantity": 3,
+  "estimatedCost": 18000000
 }
 ```
 
@@ -47,13 +54,24 @@ Response `201 Created` với resource URL (`Location`):
   "title": "Request a new monitor",
   "description": "A second monitor is needed for development work.",
   "category": "Equipment",
+  "priority": "High",
+  "quantity": 3,
+  "estimatedCost": 18000000,
   "status": "Pending",
   "requesterId": "demo-employee-id",
-  "createdAt": "2026-10-14T05:00:00Z"
+  "requesterFullName": "Demo Employee",
+  "requesterEmail": "employee@example.local",
+  "requesterDepartmentName": "Information Technology",
+  "createdAt": "2026-10-14T05:00:00Z",
+  "updatedAt": null
 }
 ```
 
-Dữ liệu chỉ để minh họa contract. `requesterId` phải lấy từ JWT, **không** lấy từ body.
+Dữ liệu chỉ để minh họa contract. `requesterId` phải lấy từ JWT, **không** lấy từ body. `updatedAt` là `null` khi request chưa từng được sửa hoặc đổi trạng thái; sau đó API trả thời điểm thay đổi gần nhất theo UTC.
+
+### PUT `/api/requests/{id}`
+
+Body dùng cùng các trường và giới hạn validation như khi tạo request: `title`, `description`, `category`, `priority`, `quantity`, `estimatedCost`. `priority` chỉ nhận `Low`, `Medium`, hoặc `High`; `quantity` phải là số nguyên từ 1 đến 1.000; `estimatedCost` là tổng chi phí VND tùy chọn và phải lớn hơn 0 khi được cung cấp. Chỉ owner được sửa và request phải còn `Pending`; non-owner nhận `403`, request không còn Pending hoặc bị cập nhật đồng thời nhận `409`.
 
 ### POST `/api/requests/{id}/approve`
 

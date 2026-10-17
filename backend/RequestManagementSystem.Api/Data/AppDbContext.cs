@@ -16,10 +16,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<RequestStatusHistory> RequestStatusHistories =>
         Set<RequestStatusHistory>();
 
+    public DbSet<Department> Departments => Set<Department>();
+
     protected override void OnModelCreating(
         ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+
+        builder.Entity<Department>()
+            .HasIndex(department => department.Code)
+            .IsUnique();
+
+        builder.Entity<ApplicationUser>()
+            .HasOne(user => user.Department)
+            .WithMany(department => department.Users)
+            .HasForeignKey(user => user.DepartmentId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.Entity<Request>()
             .HasOne(request => request.Requester)
@@ -30,6 +42,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<Request>()
             .Property(request => request.Status)
             .HasMaxLength(50);
+
+        builder.Entity<Request>()
+            .Property(request => request.Priority)
+            .HasMaxLength(20);
+
+        builder.Entity<Request>()
+            .Property(request => request.EstimatedCost)
+            .HasPrecision(18, 2);
 
         builder.Entity<Request>()
             .HasIndex(request => new

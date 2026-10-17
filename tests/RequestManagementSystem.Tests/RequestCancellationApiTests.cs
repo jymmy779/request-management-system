@@ -61,6 +61,8 @@ public class RequestCancellationApiTests
 
         Assert.Equal(RequestStatuses.Pending, cancellationHistory.FromStatus);
         Assert.Equal(scenario.Actor.Id, cancellationHistory.ChangedByUserId);
+        Assert.Equal(cancellationHistory.ChangedAt, savedRequest.UpdatedAt);
+        Assert.Equal(savedRequest.UpdatedAt, responseDto.UpdatedAt);
     }
 
     [Theory]

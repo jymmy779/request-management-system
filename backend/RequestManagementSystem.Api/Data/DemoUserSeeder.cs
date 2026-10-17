@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using RequestManagementSystem.Api.Authorization;
 using RequestManagementSystem.Api.Models;
@@ -15,26 +16,36 @@ public static class DemoUserSeeder
         var userManager =
             services.GetRequiredService<UserManager<ApplicationUser>>();
 
-        await SeedUserAsync(
-            configuration,
-            userManager,
-            AppRoles.Employee);
+        var context = services.GetRequiredService<AppDbContext>();
 
         await SeedUserAsync(
             configuration,
             userManager,
-            AppRoles.Manager);
+            context,
+            AppRoles.Employee,
+            DepartmentSeeder.InformationTechnologyCode);
 
         await SeedUserAsync(
             configuration,
             userManager,
-            AppRoles.Admin);
+            context,
+            AppRoles.Manager,
+            DepartmentSeeder.InformationTechnologyCode);
+
+        await SeedUserAsync(
+            configuration,
+            userManager,
+            context,
+            AppRoles.Admin,
+            DepartmentSeeder.OperationsCode);
     }
 
     private static async Task SeedUserAsync(
         IConfiguration configuration,
         UserManager<ApplicationUser> userManager,
-        string role)
+        AppDbContext context,
+        string role,
+        string departmentCode)
     {
         var email = configuration[$"DemoUsers:{role}:Email"]
             ?? throw new InvalidOperationException(
@@ -48,6 +59,17 @@ public static class DemoUserSeeder
             configuration[$"DemoUsers:{role}:FullName"]
             ?? $"Demo {role}";
 
+        var departmentId = await context.Departments
+            .Where(department => department.Code == departmentCode)
+            .Select(department => department.Id)
+            .SingleOrDefaultAsync();
+
+        if (departmentId == 0)
+        {
+            throw new InvalidOperationException(
+                $"Demo department '{departmentCode}' not found.");
+        }
+
         var user = await userManager.FindByEmailAsync(email);
 
         if (user is null)
@@ -57,7 +79,8 @@ public static class DemoUserSeeder
                 UserName = email,
                 Email = email,
                 EmailConfirmed = true,
-                FullName = fullName
+                FullName = fullName,
+                DepartmentId = departmentId
             };
 
             var createResult =
@@ -74,9 +97,11 @@ public static class DemoUserSeeder
                     $"Could not create demo {role}: {errors}");
             }
         }
-        else if (user.FullName != fullName)
+        else if (user.FullName != fullName ||
+                 user.DepartmentId != departmentId)
         {
             user.FullName = fullName;
+            user.DepartmentId = departmentId;
 
             var updateResult =
                 await userManager.UpdateAsync(user);

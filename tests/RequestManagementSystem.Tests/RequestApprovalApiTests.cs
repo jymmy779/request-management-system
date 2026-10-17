@@ -63,6 +63,8 @@ public class RequestApprovalApiTests
 
         Assert.Equal(RequestStatuses.Pending, approvalHistory.FromStatus);
         Assert.Equal(scenario.Actor.Id, approvalHistory.ChangedByUserId);
+        Assert.Equal(approvalHistory.ChangedAt, savedRequest.UpdatedAt);
+        Assert.Equal(savedRequest.UpdatedAt, responseDto.UpdatedAt);
     }
 
     [Fact]

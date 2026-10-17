@@ -87,6 +87,28 @@ public class DemoRequestSeederTests
             requests,
             request => request.Status == RequestStatuses.Cancelled);
 
+        Assert.Contains(requests, request =>
+            request.Priority == RequestPriorities.Low);
+        Assert.Contains(requests, request =>
+            request.Priority == RequestPriorities.Medium);
+        Assert.Contains(requests, request =>
+            request.Priority == RequestPriorities.High);
+
+        Assert.All(requests, request =>
+            Assert.InRange(request.Quantity, 1, 5));
+        Assert.Equal(5, requests.Select(
+            request => request.Quantity).Distinct().Count());
+
+        Assert.All(
+            requests.Where(request =>
+                request.Category == RequestCategories.Equipment ||
+                request.Category == RequestCategories.Software),
+            request => Assert.True(request.EstimatedCost > 0));
+        Assert.Contains(requests, request =>
+            request.EstimatedCost is null);
+        Assert.Contains(requests, request =>
+            request.EstimatedCost > 0);
+
         foreach (var request in requests)
         {
             var history = request.StatusHistory
@@ -103,6 +125,15 @@ public class DemoRequestSeederTests
                 RequestStatuses.Pending,
                 history[0].ToStatus);
             Assert.Equal(request.Status, history[^1].ToStatus);
+
+            if (request.Status == RequestStatuses.Pending)
+            {
+                Assert.Null(request.UpdatedAt);
+            }
+            else
+            {
+                Assert.Equal(history[^1].ChangedAt, request.UpdatedAt);
+            }
 
             if (request.Status == RequestStatuses.Rejected)
             {
@@ -125,6 +156,50 @@ public class DemoRequestSeederTests
                     history[^1].ChangedByUserId);
             }
         }
+
+        var nonDemoRequest = new Request
+        {
+            Title = "Real request that backfill must not change",
+            Description = "This row is outside the demo-load scope.",
+            Category = RequestCategories.Other,
+            Priority = RequestPriorities.High,
+            Quantity = 9,
+            EstimatedCost = 999m,
+            RequesterId = employee.Id
+        };
+
+        context.Requests.Add(nonDemoRequest);
+
+        var demoRequests = await context.Requests
+            .Where(request => request.Title.StartsWith("[DEMO-LOAD]"))
+            .ToListAsync();
+
+        foreach (var request in demoRequests)
+        {
+            request.Priority = RequestPriorities.Medium;
+            request.Quantity = 1;
+            request.EstimatedCost = null;
+            request.UpdatedAt = null;
+        }
+
+        await context.SaveChangesAsync();
+        context.ChangeTracker.Clear();
+
+        var firstUpdatedCount =
+            await DemoRequestSeeder.BackfillAsync(context);
+        var secondUpdatedCount =
+            await DemoRequestSeeder.BackfillAsync(context);
+
+        Assert.Equal(20, firstUpdatedCount);
+        Assert.Equal(0, secondUpdatedCount);
+
+        var savedNonDemoRequest = await context.Requests
+            .AsNoTracking()
+            .SingleAsync(request => request.Id == nonDemoRequest.Id);
+
+        Assert.Equal(RequestPriorities.High, savedNonDemoRequest.Priority);
+        Assert.Equal(9, savedNonDemoRequest.Quantity);
+        Assert.Equal(999m, savedNonDemoRequest.EstimatedCost);
     }
 
     private static ApplicationUser CreateUser(

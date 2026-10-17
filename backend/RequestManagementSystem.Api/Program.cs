@@ -10,6 +10,25 @@ using RequestManagementSystem.Api.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
+const string frontendCorsPolicy = "Frontend";
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
+    ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(frontendCorsPolicy, policy =>
+    {
+        policy
+            .WithOrigins(allowedOrigins)
+            .AllowCredentials()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     var connectionString = builder.Configuration
@@ -50,6 +69,26 @@ builder.Services
                 Encoding.UTF8.GetBytes(jwtKey)),
             ClockSkew = TimeSpan.Zero
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var hasAuthorizationHeader =
+                    !string.IsNullOrWhiteSpace(
+                        context.Request.Headers.Authorization);
+
+                if (!hasAuthorizationHeader &&
+                    context.Request.Cookies.TryGetValue(
+                        AuthCookieNames.AccessToken,
+                        out var accessToken))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization(options =>
@@ -86,12 +125,40 @@ if (!app.Environment.IsEnvironment("Testing"))
 
     if (app.Environment.IsDevelopment())
     {
+        await DepartmentSeeder.SeedAsync(scope.ServiceProvider);
         await DemoUserSeeder.SeedAsync(scope.ServiceProvider);
     }
 }
 
 var seedOptionIndex =
     Array.IndexOf(args, "--seed-demo-data");
+
+var shouldBackfillDemoData =
+    args.Contains("--backfill-demo-data");
+
+if (shouldBackfillDemoData)
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException(
+            "Demo request backfill is only allowed in Development.");
+    }
+
+    using var scope = app.Services.CreateScope();
+
+    var context =
+        scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    var updatedCount =
+        await DemoRequestSeeder.BackfillAsync(context);
+
+    Console.WriteLine(
+        updatedCount == 0
+            ? "Demo requests are already up to date."
+            : $"Updated {updatedCount} demo requests.");
+
+    return;
+}
 
 if (seedOptionIndex >= 0)
 {
@@ -137,6 +204,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(frontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();

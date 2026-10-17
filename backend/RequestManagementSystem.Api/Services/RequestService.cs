@@ -87,11 +87,18 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department != null
+                    ? request.Requester.Department.Name
+                    : null,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             })
             .ToListAsync();
 
@@ -118,7 +125,10 @@ public class RequestService
             .Select(user => new
             {
                 user.FullName,
-                user.Email
+                user.Email,
+                DepartmentName = user.Department != null
+                    ? user.Department.Name
+                    : null
             })
             .SingleAsync();
 
@@ -127,6 +137,9 @@ public class RequestService
             Title = dto.Title,
             Description = dto.Description,
             Category = dto.Category,
+            Priority = dto.Priority,
+            Quantity = dto.Quantity,
+            EstimatedCost = dto.EstimatedCost,
             RequesterId = requesterId,
             CreatedAt = now
         };
@@ -148,11 +161,93 @@ public class RequestService
             Title = request.Title,
             Description = request.Description,
             Category = request.Category,
+            Priority = request.Priority,
+            Quantity = request.Quantity,
+            EstimatedCost = request.EstimatedCost,
             Status = request.Status,
             RequesterId = request.RequesterId,
             RequesterFullName = requester.FullName,
             RequesterEmail = requester.Email ?? string.Empty,
-            CreatedAt = request.CreatedAt
+            RequesterDepartmentName = requester.DepartmentName,
+            CreatedAt = request.CreatedAt,
+            UpdatedAt = request.UpdatedAt
+        };
+    }
+
+    public async Task<RequestUpdateResult> UpdateAsync(
+        int requestId,
+        string actorUserId,
+        UpdateRequestDto dto)
+    {
+        var request = await _context.Requests
+            .Include(item => item.Requester)
+            .ThenInclude(requester => requester.Department)
+            .SingleOrDefaultAsync(item => item.Id == requestId);
+
+        if (request is null)
+        {
+            return new RequestUpdateResult
+            {
+                Outcome = RequestUpdateOutcome.NotFound
+            };
+        }
+
+        if (request.RequesterId != actorUserId)
+        {
+            return new RequestUpdateResult
+            {
+                Outcome = RequestUpdateOutcome.Forbidden
+            };
+        }
+
+        if (request.Status != RequestStatuses.Pending)
+        {
+            return new RequestUpdateResult
+            {
+                Outcome = RequestUpdateOutcome.Conflict
+            };
+        }
+
+        request.Title = dto.Title;
+        request.Description = dto.Description;
+        request.Category = dto.Category;
+        request.Priority = dto.Priority;
+        request.Quantity = dto.Quantity;
+        request.EstimatedCost = dto.EstimatedCost;
+        request.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return new RequestUpdateResult
+            {
+                Outcome = RequestUpdateOutcome.Conflict
+            };
+        }
+
+        return new RequestUpdateResult
+        {
+            Outcome = RequestUpdateOutcome.Success,
+            Request = new RequestResponseDto
+            {
+                Id = request.Id,
+                Title = request.Title,
+                Description = request.Description,
+                Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
+                Status = request.Status,
+                RequesterId = request.RequesterId,
+                RequesterFullName = request.Requester.FullName,
+                RequesterEmail = request.Requester.Email ?? string.Empty,
+                RequesterDepartmentName = request.Requester.Department?.Name,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
+            }
         };
     }
 
@@ -178,11 +273,18 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department != null
+                    ? request.Requester.Department.Name
+                    : null,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             })
             .SingleOrDefaultAsync();
     }
@@ -233,6 +335,7 @@ public class RequestService
     {
         var request = await _context.Requests
             .Include(request => request.Requester)
+            .ThenInclude(requester => requester.Department)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -265,6 +368,7 @@ public class RequestService
         var changedAt = DateTime.UtcNow;
 
         request.Status = RequestStatuses.Approved;
+        request.UpdatedAt = changedAt;
         request.StatusHistory.Add(new RequestStatusHistory
         {
             FromStatus = previousStatus,
@@ -290,11 +394,16 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department?.Name,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             }
         };
     }
@@ -306,6 +415,7 @@ public class RequestService
     {
         var request = await _context.Requests
             .Include(request => request.Requester)
+            .ThenInclude(requester => requester.Department)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -338,6 +448,7 @@ public class RequestService
         var changedAt = DateTime.UtcNow;
 
         request.Status = RequestStatuses.Rejected;
+        request.UpdatedAt = changedAt;
         request.StatusHistory.Add(new RequestStatusHistory
         {
             FromStatus = previousStatus,
@@ -364,11 +475,16 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department?.Name,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             }
         };
     }
@@ -379,6 +495,7 @@ public class RequestService
     {
         var request = await _context.Requests
             .Include(request => request.Requester)
+            .ThenInclude(requester => requester.Department)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -403,6 +520,7 @@ public class RequestService
         var changedAt = DateTime.UtcNow;
 
         request.Status = RequestStatuses.Completed;
+        request.UpdatedAt = changedAt;
         request.StatusHistory.Add(new RequestStatusHistory
         {
             FromStatus = previousStatus,
@@ -428,11 +546,16 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department?.Name,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             }
         };
     }
@@ -443,6 +566,7 @@ public class RequestService
     {
         var request = await _context.Requests
             .Include(request => request.Requester)
+            .ThenInclude(requester => requester.Department)
             .SingleOrDefaultAsync(request => request.Id == requestId);
 
         if (request is null)
@@ -475,6 +599,7 @@ public class RequestService
         var changedAt = DateTime.UtcNow;
 
         request.Status = RequestStatuses.Cancelled;
+        request.UpdatedAt = changedAt;
         request.StatusHistory.Add(new RequestStatusHistory
         {
             FromStatus = previousStatus,
@@ -500,11 +625,16 @@ public class RequestService
                 Title = request.Title,
                 Description = request.Description,
                 Category = request.Category,
+                Priority = request.Priority,
+                Quantity = request.Quantity,
+                EstimatedCost = request.EstimatedCost,
                 Status = request.Status,
                 RequesterId = request.RequesterId,
                 RequesterFullName = request.Requester.FullName,
                 RequesterEmail = request.Requester.Email ?? string.Empty,
-                CreatedAt = request.CreatedAt
+                RequesterDepartmentName = request.Requester.Department?.Name,
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
             }
         };
     }

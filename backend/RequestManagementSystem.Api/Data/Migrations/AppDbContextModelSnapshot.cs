@@ -167,6 +167,9 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -214,6 +217,8 @@ namespace RequestManagementSystem.Api.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DepartmentId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -223,6 +228,32 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("RequestManagementSystem.Api.Models.Department", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("RequestManagementSystem.Api.Models.Request", b =>
@@ -244,6 +275,18 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
                     b.Property<string>("RequesterId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -262,6 +305,9 @@ namespace RequestManagementSystem.Api.Data.Migrations
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -365,6 +411,16 @@ namespace RequestManagementSystem.Api.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("RequestManagementSystem.Api.Models.ApplicationUser", b =>
+                {
+                    b.HasOne("RequestManagementSystem.Api.Models.Department", "Department")
+                        .WithMany("Users")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Department");
+                });
+
             modelBuilder.Entity("RequestManagementSystem.Api.Models.Request", b =>
                 {
                     b.HasOne("RequestManagementSystem.Api.Models.ApplicationUser", "Requester")
@@ -393,6 +449,11 @@ namespace RequestManagementSystem.Api.Data.Migrations
                     b.Navigation("ChangedByUser");
 
                     b.Navigation("Request");
+                });
+
+            modelBuilder.Entity("RequestManagementSystem.Api.Models.Department", b =>
+                {
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("RequestManagementSystem.Api.Models.Request", b =>

@@ -1,6 +1,6 @@
 # 09 — Current Project Status (living document)
 
-**Last updated:** 2026-10-17
+**Last updated:** 2026-10-18
 **Source of truth:** Actual repository, verified commands, and developer confirmation.
 
 ## Goal
@@ -147,6 +147,49 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 
 ## Current milestone
 
+**M5 — React UI (small). In progress.**
+
+- [x] Created `frontend/` with Vite, React, TypeScript, and ESLint.
+- [x] Removed the Vite starter screen and unused starter assets; added a minimal responsive application shell.
+- [x] Verified the frontend with `npm run build --prefix frontend` and `npm run lint --prefix frontend`.
+- [x] Configured an allow-listed ASP.NET Core CORS policy for `http://localhost:5173`; a real preflight request returns the expected allow-origin, method, and header values.
+- [x] Added environment-based frontend API configuration and a typed `login()` function matching the backend contract.
+- [x] Added a controlled React login form with pending, invalid-credential, and success states; developer verified a successful login against the local API.
+- [x] Migrated browser authentication from a token JSON response to a server-issued HttpOnly JWT cookie; frontend requests include credentials and JavaScript never receives the token.
+- [x] Added cookie-based `/api/auth/me` authentication and `/api/auth/logout`; the full backend suite passes 85/85 tests, including cookie attributes and logout behavior.
+- [x] Added frontend session restoration through `/api/auth/me`, an authenticated user shell, and a logout action; frontend build and lint pass.
+- [x] Centralized the frontend `/api` base path and added a typed request-list client supporting the backend search, filter, sort, and pagination query contract.
+- [x] Split the login form and authenticated shell into focused React components instead of keeping the whole UI in `App.tsx`.
+- [x] Added a route-level `LoginPage`; `LoginForm` now contains only form state and controls.
+- [x] Added React Router with `/login` and protected `/requests` routes; route declarations are centralized in `routes/AppRoutes.tsx`, while root and unknown paths redirect according to the restored server session.
+- [x] Connected the frontend to the backend API and implemented cookie-based login/logout.
+- [x] Replaced the authenticated placeholder with the first request-list page, including loading, retryable error, empty, and populated states; the first 20 requests render with status badges and local timestamps.
+- [x] Added a shared authenticated `AppLayout` with responsive sidebar navigation, account context, and logout; protected pages render inside it through a nested route outlet.
+- [x] Added server-side Previous/Next request pagination using the API's current-page, total-count, and total-pages metadata.
+- [x] Added a dedicated request filter component for title/description search, status/category filters, and allow-listed sorting; applying or clearing criteria resets the server-side list to page 1.
+- [x] Added a protected `/requests/:requestId` detail page backed by the ownership-aware request-detail API; list titles link to it and loading, retryable error, inaccessible/missing, and invalid-ID states are handled.
+- [x] Added a protected `/requests/new` page, reusable validated form, typed create-request API client, and sidebar navigation; successful creation redirects to the new request detail page. Frontend build and lint pass; browser/API creation remains to be manually verified.
+- [x] Added `PUT /api/requests/{id}` for owner-only Pending request editing, with DTO validation, optimistic-concurrency conflict handling, and seven service/API tests.
+- [x] Redesigned frontend to match AdminHub approval workflow design: dark navy sidebar, workflow stepper, 2-column detail layout, interactive approval/rejection decision cards, and audit history timeline.
+- [x] Connected frontend workflow transitions (`approve`, `reject`, `complete`, `cancel`) and history retrieval (`GET /api/requests/{id}/history`).
+- [x] Enhanced `/requests/new` and `/requests/:id/edit` with AdminHub 2-column layout: interactive category cards, live character counters, approval workflow preview stepper, editing policies, and requester profile snippet.
+- [x] Upgraded `RequestFilters` on `/requests` with quick status segmented tabs, search box with clear button, instant category/sort updates, and active filter tags.
+- [x] Overhauled the Login page (`/login`) to the AdminHub aesthetic: deep navy ambient backdrop, elevated white card with glowing accents, AdminHub brand header, icon-adorned input fields, password visibility toggle, loading states, and enterprise RBAC footer (without demo shortcuts as requested).
+- [x] Verified frontend with `npm run build` and `npm run lint`: 0 errors.
+- [x] Added the backend Department foundation: a normalized `Department` entity, unique department code, and an optional `ApplicationUser.DepartmentId` foreign key using `SET NULL`; generated, reviewed, and applied the `AddDepartments` migration.
+- [x] Added an idempotent development department seeder for IT, Human Resources, Finance, Operations, and Procurement; demo Employee and Manager users belong to IT while the demo Admin belongs to Operations, without changing request authorization rules.
+- [x] Exposed nullable department names through `/api/auth/me` and all request responses, and replaced the hard-coded frontend department labels with API data plus an unassigned fallback.
+- [x] Added request priority (`Low`, `Medium`, `High`) end to end across EF Core, create/update validation, API responses, tests, and React create/edit/list/detail views; existing SQL Server requests were backfilled to `Medium` by `AddRequestPriority`.
+- [x] Added request quantity end to end with a 1–1,000 range across EF Core, create/update validation, API responses, tests, and React create/edit/list/detail views; existing SQL Server requests were backfilled to `1` by `AddRequestQuantity`.
+- [x] Added optional VND estimated cost end to end using `decimal(18,2)`, positive-value validation, API responses, tests, and React create/edit/list/detail views; existing requests remain `NULL` rather than receiving fabricated costs.
+- [x] Added nullable `UpdatedAt` end to end; content edits and successful workflow transitions maintain it while newly created and untouched requests keep it `NULL`. The detail UI displays the latest update in local time.
+- [x] Enhanced future demo-request generation with deterministic Low/Medium/High priorities, quantities from 1–5, category-based optional estimated costs, and `UpdatedAt` values consistent with the final audit entry.
+- [x] Added the Development-only `--backfill-demo-data` command, which updates only `[DEMO-LOAD]` requests in 500-row batches and skips rows already carrying the expected values.
+- [x] Added a reusable global toast provider for create, update, approve, reject, complete, and cancel feedback; up to five concurrent notifications stack without overwriting each other, survive route navigation, have independent auto-dismiss timers, visible SVG status icons, fade-out transitions, manual dismissal, and appropriate live-region roles.
+- [x] Scoped the AdminHub design reference for M5: preserve the current single-step Manager/Admin workflow and treat multi-level approval, vendors, policies, attachments, comments, save drafts, and advanced reports as post-MVP backlog rather than implied requirements.
+
+## Completed milestone
+
 **M4.5 — Backend query & demo-data hardening. Complete.**
 
 - [x] Add a human-readable `FullName` to users and expose user name/email through request and history DTOs.
@@ -194,7 +237,18 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - M4.5 indexes: developer confirmed `AddRequestListIndexes` was applied to local SQL Server; the full standard suite passes 83/83 afterward.
 - M4.5 demo data: developer confirmed 10,000 requests and 17,500 histories in local SQL Server; automated seeder coverage passes and the full standard suite passes 84/84.
 - M4.5 query plans: developer confirmed the expected execution-plan operators for Employee ownership, Manager status filtering, and substring search. The Employee checks reported about 50–52 logical reads with zero physical reads.
+- M5 request update backend: filtered update tests pass 7/7 and the full standard suite passes 92/92 in Release on 2026-10-17. Debug output remained locked only because the development API was running.
+- M5 department foundation: the API Release build succeeds and the standard suite passes 92/92 after generating `AddDepartments`; the migration still needs to be applied to local SQL Server.
+- M5 department seeding: `AddDepartments` is applied to local SQL Server; the idempotency test passes and the full standard suite passes 93/93. Restarting the Development API runs the seeder and updates existing demo users.
+- M5 department responses: backend tests pass 93/93; frontend production build and ESLint both pass on 2026-10-18.
+- M5 request priority: `AddRequestPriority` was applied successfully; backend tests pass 94/94 and frontend production build/ESLint both pass on 2026-10-18.
+- M5 request quantity: `AddRequestQuantity` was applied successfully; backend tests pass 95/95 and frontend production build/ESLint both pass on 2026-10-18.
+- M5 estimated cost: `AddRequestEstimatedCost` was applied successfully; backend tests pass 96/96 and frontend production build/ESLint both pass on 2026-10-18.
+- M5 latest update timestamp: `AddRequestUpdatedAt` was applied successfully; backend tests pass 96/96 and frontend production build/ESLint both pass on 2026-10-18.
+- M5 demo request fields: the focused seeder test passes 1/1 and the full standard suite passes 96/96 on 2026-10-18.
+- M5 demo backfill: the local command updated 10,000 `[DEMO-LOAD]` requests; a second run reported that all demo requests were already up to date. The focused test proves non-demo data remains unchanged, and the full standard suite passes 96/96.
+- M5 toast feedback: frontend production build and ESLint pass on 2026-10-18.
 
 ## Next single task
 
-Review and commit the completed M4.5 backend work before starting the first M5 React task.
+Add the request priority filter end to end (validated API query, EF Core filtering, integration coverage, frontend control), then add only the query-driven category/priority indexes justified by that list query.

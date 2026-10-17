@@ -76,12 +76,20 @@ Tasks:
 
 **DoD:** List API trả dữ liệu dễ đọc và có search/filter/sort/pagination; quyền truy cập vẫn đúng; tests pass; dữ liệu demo lớn có thể tạo lại an toàn; index và query plan được kiểm tra trên SQL Server.
 
-## M5 — React UI (small)
+## M5 — React UI (small) (CURRENT)
 
-- [ ] Vite + React + TypeScript, login/logout, request list/detail/create.
-- [ ] Manager action buttons approve/reject/complete; employee cancel.
-- [ ] Loading/error/empty states; display UTC -> local time.
-- [ ] API e2e manual smoke checklist; chạy lại backend tests sau thay đổi.
+- [x] Vite + React + TypeScript; login/logout bằng HttpOnly cookie và protected routes.
+- [x] App layout có sidebar; request list/detail/create/edit và history.
+- [x] Manager/Admin có approve/reject/complete; owner có cancel theo state machine.
+- [x] Loading/error/empty states, UTC -> local time và toast phản hồi thao tác.
+- [x] Hiển thị requester, department, priority, quantity, estimated cost và updated time.
+- [ ] Bổ sung priority filter end to end; thêm index theo query thực tế và kiểm tra lại execution plan.
+- [ ] Thêm API danh sách phòng ban để form/filter không hard-code dữ liệu.
+- [ ] Thêm My Approvals đơn giản trên query contract hiện có hoặc mở rộng tối thiểu khi cần.
+- [ ] Thêm dashboard thống kê tối giản theo vai trò; không triển khai report/analytics chuyên sâu trong M5.
+- [ ] API e2e manual smoke checklist cho Employee/Manager/Admin; chạy lại backend tests sau thay đổi.
+
+Thiết kế AdminHub chỉ là tham khảo hình ảnh và bố cục. M5 không bao gồm workflow duyệt nhiều cấp, vendor, policy, module request riêng theo từng phòng ban, attachment, comments, save draft hoặc reporting chuyên sâu.
 
 **DoD:** Demo full flow không cần Postman; backend tests vẫn pass.
 

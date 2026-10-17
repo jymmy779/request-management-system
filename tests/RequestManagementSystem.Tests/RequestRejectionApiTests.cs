@@ -72,6 +72,8 @@ public class RequestRejectionApiTests
         Assert.Equal(RequestStatuses.Pending, rejectionHistory.FromStatus);
         Assert.Equal(scenario.Actor.Id, rejectionHistory.ChangedByUserId);
         Assert.Equal(dto.Reason, rejectionHistory.Note);
+        Assert.Equal(rejectionHistory.ChangedAt, savedRequest.UpdatedAt);
+        Assert.Equal(savedRequest.UpdatedAt, responseDto.UpdatedAt);
     }
 
     [Theory]

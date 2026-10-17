@@ -63,6 +63,8 @@ public class RequestCompletionApiTests
 
         Assert.Equal(RequestStatuses.Approved, completionHistory.FromStatus);
         Assert.Equal(scenario.Actor.Id, completionHistory.ChangedByUserId);
+        Assert.Equal(completionHistory.ChangedAt, savedRequest.UpdatedAt);
+        Assert.Equal(savedRequest.UpdatedAt, responseDto.UpdatedAt);
     }
 
     [Fact]

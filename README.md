@@ -81,7 +81,15 @@ Database mới sẽ chưa có request demo. Project không tự động seed req
 dotnet run --project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj -- --seed-demo-data 10000
 ```
 
-Seeder ghi theo batch, tạo history phù hợp với status và bỏ qua nếu dữ liệu `[DEMO-LOAD]` đã tồn tại. Số lượng cho phép từ 1 đến 50.000; dữ liệu SQL Server local không được commit vào Git.
+Seeder ghi theo batch, tạo history phù hợp với status, phân bổ priority/quantity/estimated cost theo quy luật cố định và bỏ qua nếu dữ liệu `[DEMO-LOAD]` đã tồn tại. Số lượng cho phép từ 1 đến 50.000; dữ liệu SQL Server local không được commit vào Git.
+
+Nếu dữ liệu `[DEMO-LOAD]` đã được tạo bằng phiên bản seeder cũ, chủ động bổ sung priority, quantity, estimated cost và updated time bằng:
+
+```powershell
+dotnet run --project backend/RequestManagementSystem.Api/RequestManagementSystem.Api.csproj -- --backfill-demo-data
+```
+
+Lệnh chỉ cập nhật request có prefix `[DEMO-LOAD]`, xử lý theo batch và có thể chạy lại an toàn. Request do người dùng tạo không bị thay đổi.
 
 ## Chạy API hiện có
 

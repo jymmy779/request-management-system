@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import type { DepartmentItem } from '../api/departments'
 import type {
   RequestCategory,
+  RequestPriority,
   RequestQuery,
   RequestStatus,
 } from '../api/requests'
@@ -16,6 +18,9 @@ type SortOption =
 
 type RequestFiltersProps = {
   disabled: boolean
+  departments: DepartmentItem[]
+  isDepartmentsLoading: boolean
+  departmentsUnavailable: boolean
   onApply: (query: RequestQuery) => void
 }
 
@@ -28,16 +33,26 @@ const statusTabs: Array<{ label: string; value: RequestStatus | '' }> = [
   { label: 'Cancelled', value: 'Cancelled' },
 ]
 
-export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
+export function RequestFilters({
+  disabled,
+  departments,
+  isDepartmentsLoading,
+  departmentsUnavailable,
+  onApply,
+}: RequestFiltersProps) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<RequestStatus | ''>('')
   const [category, setCategory] = useState<RequestCategory | ''>('')
+  const [priority, setPriority] = useState<RequestPriority | ''>('')
+  const [departmentId, setDepartmentId] = useState<number | ''>('')
   const [sortOption, setSortOption] = useState<SortOption>('createdAt:desc')
 
   function triggerApply(
     nextSearch: string,
     nextStatus: RequestStatus | '',
     nextCategory: RequestCategory | '',
+    nextPriority: RequestPriority | '',
+    nextDepartmentId: number | '',
     nextSort: SortOption,
   ) {
     const [sortBy, sortDirection] = nextSort.split(':') as [
@@ -49,6 +64,8 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
       search: nextSearch.trim() || undefined,
       status: nextStatus || undefined,
       category: nextCategory || undefined,
+      priority: nextPriority || undefined,
+      departmentId: nextDepartmentId || undefined,
       sortBy,
       sortDirection,
     })
@@ -56,28 +73,50 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
 
   function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    triggerApply(search, status, category, sortOption)
+    triggerApply(
+      search,
+      status,
+      category,
+      priority,
+      departmentId,
+      sortOption,
+    )
   }
 
   function handleStatusTabClick(selectedStatus: RequestStatus | '') {
     setStatus(selectedStatus)
-    triggerApply(search, selectedStatus, category, sortOption)
+    triggerApply(
+      search,
+      selectedStatus,
+      category,
+      priority,
+      departmentId,
+      sortOption,
+    )
   }
 
   function clearSearch() {
     setSearch('')
-    triggerApply('', status, category, sortOption)
+    triggerApply('', status, category, priority, departmentId, sortOption)
   }
 
   function clearAllFilters() {
     setSearch('')
     setStatus('')
     setCategory('')
+    setPriority('')
+    setDepartmentId('')
     setSortOption('createdAt:desc')
     onApply({ sortBy: 'createdAt', sortDirection: 'desc' })
   }
 
-  const hasActiveFilters = Boolean(search.trim() || status || category)
+  const hasActiveFilters = Boolean(
+    search.trim() || status || category || priority || departmentId,
+  )
+
+  const selectedDepartment = departments.find(
+    (department) => department.id === departmentId,
+  )
 
   return (
     <div className="filters-wrapper">
@@ -144,7 +183,14 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
             onChange={(e) => {
               const val = e.target.value as RequestCategory | ''
               setCategory(val)
-              triggerApply(search, status, val, sortOption)
+              triggerApply(
+                search,
+                status,
+                val,
+                priority,
+                departmentId,
+                sortOption,
+              )
             }}
             disabled={disabled}
           >
@@ -152,6 +198,70 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
             <option value="Equipment">Equipment</option>
             <option value="Software">Software</option>
             <option value="Other">Other</option>
+          </select>
+        </div>
+
+        {/* Priority Select */}
+        <div className="filter-select-group">
+          <label htmlFor="filter-priority-select">Priority</label>
+          <select
+            id="filter-priority-select"
+            value={priority}
+            onChange={(e) => {
+              const val = e.target.value as RequestPriority | ''
+              setPriority(val)
+              triggerApply(
+                search,
+                status,
+                category,
+                val,
+                departmentId,
+                sortOption,
+              )
+            }}
+            disabled={disabled}
+          >
+            <option value="">All Priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </select>
+        </div>
+
+        {/* Department Select */}
+        <div className="filter-select-group">
+          <label htmlFor="filter-department-select">Department</label>
+          <select
+            id="filter-department-select"
+            value={departmentId}
+            onChange={(e) => {
+              const val = e.target.value ? Number(e.target.value) : ''
+              setDepartmentId(val)
+              triggerApply(
+                search,
+                status,
+                category,
+                priority,
+                val,
+                sortOption,
+              )
+            }}
+            disabled={
+              disabled || isDepartmentsLoading || departmentsUnavailable
+            }
+          >
+            <option value="">
+              {isDepartmentsLoading
+                ? 'Loading departments...'
+                : departmentsUnavailable
+                  ? 'Departments unavailable'
+                  : 'All Departments'}
+            </option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -164,7 +274,14 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
             onChange={(e) => {
               const val = e.target.value as SortOption
               setSortOption(val)
-              triggerApply(search, status, category, val)
+              triggerApply(
+                search,
+                status,
+                category,
+                priority,
+                departmentId,
+                val,
+              )
             }}
             disabled={disabled}
           >
@@ -218,9 +335,63 @@ export function RequestFilters({ disabled, onApply }: RequestFiltersProps) {
                 type="button"
                 onClick={() => {
                   setCategory('')
-                  triggerApply(search, status, '', sortOption)
+                  triggerApply(
+                    search,
+                    status,
+                    '',
+                    priority,
+                    departmentId,
+                    sortOption,
+                  )
                 }}
                 aria-label={`Remove category filter ${category}`}
+              >
+                ✕
+              </button>
+            </span>
+          )}
+          {priority && (
+            <span className="filter-chip">
+              Priority: <strong>{priority}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  setPriority('')
+                  triggerApply(
+                    search,
+                    status,
+                    category,
+                    '',
+                    departmentId,
+                    sortOption,
+                  )
+                }}
+                aria-label={`Remove priority filter ${priority}`}
+              >
+                ✕
+              </button>
+            </span>
+          )}
+          {departmentId && (
+            <span className="filter-chip">
+              Department:{' '}
+              <strong>{selectedDepartment?.name ?? departmentId}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  setDepartmentId('')
+                  triggerApply(
+                    search,
+                    status,
+                    category,
+                    priority,
+                    '',
+                    sortOption,
+                  )
+                }}
+                aria-label={`Remove department filter ${
+                  selectedDepartment?.name ?? departmentId
+                }`}
               >
                 ✕
               </button>

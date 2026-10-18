@@ -83,9 +83,30 @@ Tasks:
 - [x] Manager/Admin có approve/reject/complete; owner có cancel theo state machine.
 - [x] Loading/error/empty states, UTC -> local time và toast phản hồi thao tác.
 - [x] Hiển thị requester, department, priority, quantity, estimated cost và updated time.
-- [ ] Bổ sung priority filter end to end; thêm index theo query thực tế và kiểm tra lại execution plan.
-- [ ] Thêm API danh sách phòng ban để form/filter không hard-code dữ liệu.
-- [ ] Thêm My Approvals đơn giản trên query contract hiện có hoặc mở rộng tối thiểu khi cần.
+- [x] Bổ sung priority filter end to end từ API validation/EF Core đến frontend control.
+- [ ] Thêm index theo query category/priority thực tế và kiểm tra lại execution plan.
+- [x] Thêm API danh sách phòng ban đã xác thực để frontend không hard-code dữ liệu tham chiếu.
+- [x] Dùng API phòng ban cho department filter trên danh sách request; phòng ban của request vẫn suy ra từ requester.
+- [x] Thêm backend My Approvals dưới dạng hàng đợi Pending có thể xử lý, loại self-approval và tái sử dụng query contract hiện có.
+- [x] Chuẩn bị frontend API/state logic cho My Approvals, gồm filter, pagination, loading, error và retry.
+- [x] Render trang My Approvals, thêm route và navigation chỉ dành cho Manager/Admin; mỗi hàng dẫn sang trang chi tiết để xử lý.
+- [x] Thêm backend Approval History dựa trên actor trong audit history, có phân quyền Manager/Admin và tái sử dụng filter/sort/pagination.
+- [x] Nối Approval History với frontend API/state dùng chung.
+- [x] Render trang Approval History và thêm navigation cho Manager/Admin.
+- [x] Thêm trang Departments dạng chỉ đọc từ API tham chiếu hiện có; chưa mở CRUD quản trị.
+- [x] Thêm API danh sách user chỉ dành cho Admin, có search/filter/sort/pagination và trả role/phòng ban mà không gây N+1 query.
+- [x] Nối danh sách user với typed frontend API/state cho filter, pagination, loading, error và retry.
+- [x] Render trang Admin Users và thêm navigation chỉ dành cho Admin.
+- [x] Thêm endpoint Admin tạo user bằng ASP.NET Core Identity, gán đúng một role và phòng ban tùy chọn; không trả hoặc lưu password plaintext.
+- [x] Nối create-user API với frontend form, toast phản hồi và refresh danh sách sau khi tạo thành công.
+- [x] Thêm endpoint authenticated đổi mật khẩu bằng current/new password; Identity cập nhật hash và phiên browser hiện tại bị đăng xuất sau khi thành công.
+- [x] Thêm trang `/profile` chỉ đọc từ session hiện tại; `/api/auth/me` trả thêm họ tên và topbar dẫn tới profile.
+- [x] Nối change-password API với `/profile/security`; thành công xóa session frontend và đưa user về login.
+- [x] Đăng ký Identity default token providers và kiểm tra token reset password có thể được tạo/xác minh.
+- [x] Thêm SMTP email abstraction và cấu hình Mailpit local không chứa secret; production có thể thay cấu hình/implementation.
+- [x] Thêm `POST /api/auth/forgot-password` với response chống dò tài khoản, reset link qua email và token lifespan 30 phút.
+- [x] Thêm `POST /api/auth/reset-password`; token sai/hết hạn/đã dùng bị từ chối và password policy vẫn do Identity kiểm tra.
+- [x] Hoàn thiện backend forgot-password với token provider và kênh gửi reset link; không trả reset token công khai qua API.
 - [ ] Thêm dashboard thống kê tối giản theo vai trò; không triển khai report/analytics chuyên sâu trong M5.
 - [ ] API e2e manual smoke checklist cho Employee/Manager/Admin; chạy lại backend tests sau thay đổi.
 

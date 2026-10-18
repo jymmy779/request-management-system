@@ -43,6 +43,46 @@ public class RequestsController : ControllerBase
         return Ok(requests);
     }
 
+    [HttpGet("my-approvals")]
+    [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
+    public async Task<IActionResult> GetMyApprovals(
+        [FromQuery] RequestQueryParameters parameters)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var requests = await _requestService.GetMyApprovalsAsync(
+            userId,
+            parameters);
+
+        return Ok(requests);
+    }
+
+    [HttpGet("approval-history")]
+    [Authorize(Policy = AppPolicies.ManagerOrAdmin)]
+    public async Task<IActionResult> GetApprovalHistory(
+        [FromQuery] RequestQueryParameters parameters)
+    {
+        var userId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var requests = await _requestService.GetApprovalHistoryAsync(
+            userId,
+            parameters);
+
+        return Ok(requests);
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {

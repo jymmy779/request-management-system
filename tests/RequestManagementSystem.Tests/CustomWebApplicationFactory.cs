@@ -1,12 +1,15 @@
 using System.Data.Common;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using RequestManagementSystem.Api.Data;
+using RequestManagementSystem.Api.Services;
 
 namespace RequestManagementSystem.Tests;
 
@@ -25,6 +28,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
 
         builder.ConfigureServices(services =>
         {
+            services
+                .AddDataProtection()
+                .UseEphemeralDataProtectionProvider();
+
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<TestEmailSender>();
+            services.AddSingleton<IEmailSender>(serviceProvider =>
+                serviceProvider.GetRequiredService<TestEmailSender>());
+
             var dbContextDescriptor = services.SingleOrDefault(
                 service => service.ServiceType ==
                     typeof(IDbContextOptionsConfiguration<AppDbContext>));

@@ -266,7 +266,8 @@ namespace RequestManagementSystem.Api.Data.Migrations
 
                     b.Property<string>("Category")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -312,6 +313,10 @@ namespace RequestManagementSystem.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedAt", "Id");
+
+                    b.HasIndex("Category", "CreatedAt", "Id");
+
+                    b.HasIndex("Priority", "CreatedAt", "Id");
 
                     b.HasIndex("RequesterId", "CreatedAt", "Id");
 

@@ -362,11 +362,15 @@ function RequestDetailContent({
               </div>
               <div className="attribute-item">
                 <span className="attribute-label">Request Type</span>
-                <span className="attribute-badge">{request.category}</span>
+                <span className={`category-badge category-${request.category.toLowerCase()}`}>
+                  {request.category}
+                </span>
               </div>
               <div className="attribute-item">
                 <span className="attribute-label">Priority</span>
-                <span className="attribute-badge">{request.priority}</span>
+                <span className={`priority-badge priority-${request.priority.toLowerCase()}`}>
+                  {request.priority}
+                </span>
               </div>
               <div className="attribute-item">
                 <span className="attribute-label">Quantity</span>
@@ -569,11 +573,15 @@ function RequestDetailContent({
               </div>
               <div className="summary-row">
                 <span>Category</span>
-                <span className="attribute-badge">{request.category}</span>
+                <span className={`category-badge category-${request.category.toLowerCase()}`}>
+                  {request.category}
+                </span>
               </div>
               <div className="summary-row">
                 <span>Priority</span>
-                <span className="attribute-badge">{request.priority}</span>
+                <span className={`priority-badge priority-${request.priority.toLowerCase()}`}>
+                  {request.priority}
+                </span>
               </div>
               <div className="summary-row">
                 <span>Quantity</span>

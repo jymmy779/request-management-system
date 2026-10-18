@@ -44,6 +44,10 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasMaxLength(50);
 
         builder.Entity<Request>()
+            .Property(request => request.Category)
+            .HasMaxLength(50);
+
+        builder.Entity<Request>()
             .Property(request => request.Priority)
             .HasMaxLength(20);
 
@@ -63,6 +67,22 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .HasIndex(request => new
             {
                 request.Status,
+                request.CreatedAt,
+                request.Id
+            });
+
+        builder.Entity<Request>()
+            .HasIndex(request => new
+            {
+                request.Category,
+                request.CreatedAt,
+                request.Id
+            });
+
+        builder.Entity<Request>()
+            .HasIndex(request => new
+            {
+                request.Priority,
                 request.CreatedAt,
                 request.Id
             });

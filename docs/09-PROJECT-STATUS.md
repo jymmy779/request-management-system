@@ -187,6 +187,33 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - [x] Added the Development-only `--backfill-demo-data` command, which updates only `[DEMO-LOAD]` requests in 500-row batches and skips rows already carrying the expected values.
 - [x] Added a reusable global toast provider for create, update, approve, reject, complete, and cancel feedback; up to five concurrent notifications stack without overwriting each other, survive route navigation, have independent auto-dismiss timers, visible SVG status icons, fade-out transitions, manual dismissal, and appropriate live-region roles.
 - [x] Scoped the AdminHub design reference for M5: preserve the current single-step Manager/Admin workflow and treat multi-level approval, vendors, policies, attachments, comments, save drafts, and advanced reports as post-MVP backlog rather than implied requirements.
+- [x] Added validated `priority=Low|Medium|High` request-list filtering in the API and integration coverage for valid combined filtering plus invalid-value `400` responses.
+- [x] Connected the priority filter to the typed frontend request client and `RequestFilters`, including instant apply, active-filter chips, individual removal, and full reset behavior.
+- [x] Configured request-list indexes for `(Category, CreatedAt, Id)` and `(Priority, CreatedAt, Id)`; constrained Category to `nvarchar(50)` so SQL Server can use it as an index key, and generated/reviewed `AddRequestCategoryPriorityIndexes` without applying it to the local database yet.
+- [x] Added authenticated `GET /api/departments`, returning `id`, `code`, and `name` through a DTO ordered by name; request creation/update still derives department from the requester rather than trusting client input.
+- [x] Added validated `departmentId` filtering across the request-list API and React UI; frontend options come from `/api/departments`, and Employee ownership filtering remains applied before department filtering.
+- [x] Added Manager/Admin-only `GET /api/requests/my-approvals` as a paged actionable queue: only Pending requests created by another user are returned, while all existing search/filter/sort/pagination behavior is reused through one shared service query path.
+- [x] Added typed frontend `getMyApprovals()` plus reusable `useAllRequests()`/`useMyApprovals()` and `useDepartments()` hooks for loading, pagination, filtering, errors, and retry.
+- [x] Added the `/my-approvals` page, Manager/Admin-only frontend route and sidebar entry; the page reuses the request filters and links each actionable item to its request detail workflow.
+- [x] Added Manager/Admin-only `GET /api/requests/approval-history`; it returns requests the current actor approved or rejected according to audit history and reuses the existing filter/sort/pagination pipeline.
+- [x] Added typed frontend `getApprovalHistory()` and reusable `useApprovalHistory()` state logic with filtering, pagination, loading, error, and retry behavior.
+- [x] Added the `/approval-history` page with Manager/Admin-only routing, sidebar navigation, filters, pagination, state feedback, and request-detail links.
+- [x] Added an authenticated read-only `/departments` page with sidebar navigation and loading/error/empty states; department CRUD remains out of scope for this task.
+- [x] Added Admin-only `GET /api/users` with validated search, role/department filters, allow-listed sorting, pagination, and a single projected user/role/department query path that avoids N+1 loading.
+- [x] Added typed frontend `getUsers()` and reusable `useUsers()` state logic for Admin user filtering, pagination, loading, error, and retry behavior.
+- [x] Added the Admin-only `/users` page with role/department filters, sorting, pagination, state feedback, and role-aware sidebar navigation.
+- [x] Added Admin-only `POST /api/users`; ASP.NET Core Identity validates and hashes the password, the operation assigns one application role and an optional valid department, and duplicate/validation outcomes use explicit HTTP responses.
+- [x] Added the Admin create-user form with role/optional-department selection, password visibility control, API validation feedback, toast notifications, and automatic list refresh after success.
+- [x] Added authenticated `POST /api/auth/change-password`; Identity verifies the current password, validates and hashes a distinct new password, then removes the current browser cookie after success.
+- [x] Added read-only `/profile`; the existing `/api/auth/me` response now includes `fullName`, and the topbar user summary links to the profile page.
+- [x] Added `/profile/security` for authenticated password changes; successful changes clear the frontend session and return the user to login.
+- [x] Registered ASP.NET Core Identity default token providers and added coverage proving a password-reset token can be generated and verified.
+- [x] Added an SMTP email abstraction with secret-free Mailpit defaults for local development; no forgot-password endpoint sends mail yet.
+- [x] Added public `POST /api/auth/forgot-password`; valid accounts receive a 30-minute reset-token link through email while all validly shaped requests receive the same empty `202` response.
+- [x] Added public `POST /api/auth/reset-password`; Identity validates the emailed token and password policy, successful reset does not sign in the user, and used tokens are rejected.
+- [x] Overhauled UI badge design system with dedicated visual styles for Priority (High, Medium, Low with alert dots), Category (Equipment, Software, Other in pastel tones), and Role (Admin, Manager, Employee), synchronized across all request, approval, user, and layout pages.
+- [x] Modernized `UsersPage` filter controls to the 3-tier AdminHub layout: quick Role segmented tabs, search box with icon and clear button, auto-trigger Department select, unified Sort dropdown, and removable active filter chips.
+- [x] Extracted user creation from the inline collapsible card in `UsersPage` into a dedicated `/users/new` page (`CreateUserPage`), with AdminHub 2-column layout, role privileges guidance, security policy sidebar, and upgraded `CreateUserForm` featuring interactive 3-card role selection (Employee, Manager, Admin) and password toggle.
 
 ## Completed milestone
 
@@ -248,7 +275,32 @@ Learn C# and ASP.NET Core by building a small internal request approval system. 
 - M5 demo request fields: the focused seeder test passes 1/1 and the full standard suite passes 96/96 on 2026-10-18.
 - M5 demo backfill: the local command updated 10,000 `[DEMO-LOAD]` requests; a second run reported that all demo requests were already up to date. The focused test proves non-demo data remains unchanged, and the full standard suite passes 96/96.
 - M5 toast feedback: frontend production build and ESLint pass on 2026-10-18.
+- M5 priority filter backend: filtered `RequestsApiTests` pass 31/31 and the full standard suite passes 97/97 on 2026-10-18; known NuGet vulnerability warnings remain.
+- M5 priority filter frontend: production build and ESLint both pass on 2026-10-18.
+- M5 category/priority indexes: the Release API build succeeds as part of migration generation, the migration contains only the expected Category column alteration and two indexes, and the full standard suite passes 97/97 on 2026-10-18.
+- M5 category/priority index migration: developer confirmed `AddRequestCategoryPriorityIndexes` was applied successfully to local SQL Server on 2026-10-18; execution-plan verification remains.
+- M5 departments endpoint: focused integration tests pass 2/2 and the full standard suite passes 99/99 in Release on 2026-10-18.
+- M5 department filter: `RequestsApiTests` pass 33/33, the full standard suite passes 101/101 in Release, and frontend production build/ESLint both pass on 2026-10-18.
+- M5 My Approvals backend: focused endpoint coverage passes 4/4 and the full standard suite passes 105/105 in Release on 2026-10-18.
+- M5 My Approvals frontend logic: RequestsPage now consumes the extracted shared hooks without changing its JSX; frontend production build and ESLint pass on 2026-10-18.
+- M5 My Approvals page: route, role-aware navigation, filters, paging, loading/error/empty states and detail links are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Approval History backend: focused authorization and actor-history coverage passes 4/4; the full standard suite passes 109/109 in Release on 2026-10-18.
+- M5 Approval History frontend logic: typed API client and reusable list hook are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Approval History page: Manager/Admin-only route and navigation plus filter, pagination, loading/error/empty states and detail links are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Departments page: authenticated read-only directory and navigation are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Admin user list backend: focused authorization/query coverage passes 5/5; the full standard suite passes 114/114 in Release on 2026-10-18.
+- M5 Admin user list frontend logic: typed API client and reusable state hook are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Admin Users page: Admin-only route/navigation plus search, filters, sorting, pagination and state feedback are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 Admin create-user backend: focused list/create/authorization/validation coverage passes 10/10; the full standard suite passes 119/119 in Release on 2026-10-18.
+- M5 Admin create-user frontend: typed mutation client, form, validation feedback, toast and list refresh are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 authenticated password change backend: focused auth coverage passes 11/11; the full standard suite passes 123/123 in Release on 2026-10-18.
+- M5 profile page: focused auth coverage passes 11/11 in Release; frontend production build and ESLint pass on 2026-10-18. The initial Debug test attempt was blocked only because the running development API held its executable open.
+- M5 profile security page: typed change-password client, confirmation validation, password visibility controls, toast feedback and forced return to login are implemented; frontend production build and ESLint pass on 2026-10-18.
+- M5 password-reset token foundation: focused auth coverage passes 12/12 in Release on 2026-10-18. The test host uses an ephemeral Data Protection provider so reset-token tests do not read or write the developer's persisted application keys.
+- M5 local email foundation: the Release API build succeeds on 2026-10-18; Mailpit delivery itself is intentionally not exercised until the forgot-password endpoint and test sender are added.
+- M5 forgot-password request endpoint: focused auth coverage passes 15/15 and the full standard backend suite passes 127/127 in Release on 2026-10-18; known NuGet vulnerability warnings remain.
+- M5 reset-password endpoint: focused auth coverage passes 18/18 and the full standard backend suite passes 130/130 in Release on 2026-10-18; known NuGet vulnerability warnings remain.
 
 ## Next single task
 
-Add the request priority filter end to end (validated API query, EF Core filtering, integration coverage, frontend control), then add only the query-driven category/priority indexes justified by that list query.
+Add frontend forgot-password and reset-password API clients/pages; the reset page must read email/token from the URL and never persist the token in browser storage.

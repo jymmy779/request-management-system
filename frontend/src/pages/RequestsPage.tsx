@@ -1,75 +1,27 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { getRequests } from '../api/requests'
-import type { RequestItem, RequestQuery } from '../api/requests'
 import { RequestFilters } from '../components/RequestFilters'
+import { useDepartments } from '../hooks/useDepartments'
+import { useAllRequests } from '../hooks/useRequestList'
 import { formatEstimatedCost } from '../utils/formatCurrency'
 
-const defaultQuery: RequestQuery = {
-  sortBy: 'createdAt',
-  sortDirection: 'desc',
-}
-
 export function RequestsPage() {
-  const pageSize = 20
-  const [requests, setRequests] = useState<RequestItem[]>([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalCount, setTotalCount] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [query, setQuery] = useState<RequestQuery>(defaultQuery)
-  const [reloadKey, setReloadKey] = useState(0)
-  const [isLoading, setIsLoading] = useState(true)
-  const [errorMessage, setErrorMessage] = useState('')
+  const {
+    requests,
+    currentPage,
+    totalCount,
+    totalPages,
+    isLoading,
+    errorMessage,
+    retryLoadRequests,
+    goToPage,
+    applyQuery,
+  } = useAllRequests()
 
-  useEffect(() => {
-    let isActive = true
-
-    getRequests({ ...query, page: currentPage, pageSize })
-      .then((result) => {
-        if (isActive) {
-          setRequests(result.items)
-          setTotalCount(result.totalCount)
-          setTotalPages(result.totalPages)
-        }
-      })
-      .catch((error: unknown) => {
-        if (isActive) {
-          setErrorMessage(
-            error instanceof Error
-              ? error.message
-              : 'Unable to load requests.',
-          )
-        }
-      })
-      .finally(() => {
-        if (isActive) {
-          setIsLoading(false)
-        }
-      })
-
-    return () => {
-      isActive = false
-    }
-  }, [currentPage, query, reloadKey])
-
-  function retryLoadRequests() {
-    setIsLoading(true)
-    setErrorMessage('')
-    setReloadKey((currentKey) => currentKey + 1)
-  }
-
-  function goToPage(page: number) {
-    setIsLoading(true)
-    setErrorMessage('')
-    setCurrentPage(page)
-  }
-
-  function applyQuery(nextQuery: RequestQuery) {
-    setIsLoading(true)
-    setErrorMessage('')
-    setCurrentPage(1)
-    setQuery(nextQuery)
-  }
+  const {
+    departments,
+    isLoading: isDepartmentsLoading,
+    isUnavailable: departmentsUnavailable,
+  } = useDepartments()
 
   return (
     <div className="adminhub-page-wrapper">
@@ -99,7 +51,13 @@ export function RequestsPage() {
 
       <section className="adminhub-card table-panel-card" aria-labelledby="request-list-title">
         <div className="filter-container">
-          <RequestFilters disabled={isLoading} onApply={applyQuery} />
+          <RequestFilters
+            disabled={isLoading}
+            departments={departments}
+            isDepartmentsLoading={isDepartmentsLoading}
+            departmentsUnavailable={departmentsUnavailable}
+            onApply={applyQuery}
+          />
         </div>
 
         {isLoading && (
@@ -162,10 +120,14 @@ export function RequestsPage() {
                         <span className="table-desc-preview">{request.description}</span>
                       </td>
                       <td>
-                        <span className="attribute-badge">{request.category}</span>
+                        <span className={`category-badge category-${request.category.toLowerCase()}`}>
+                          {request.category}
+                        </span>
                       </td>
                       <td>
-                        <span className="attribute-badge">{request.priority}</span>
+                        <span className={`priority-badge priority-${request.priority.toLowerCase()}`}>
+                          {request.priority}
+                        </span>
                       </td>
                       <td className="cell-muted">{request.quantity}</td>
                       <td className="cell-muted">

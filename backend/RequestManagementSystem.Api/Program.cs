@@ -39,7 +39,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString);
 });
 
-builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<AppDbContext>();
+builder.Services
+    .AddIdentityCore<ApplicationUser>()
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddDefaultTokenProviders();
+
+builder.Services.Configure<DataProtectionTokenProviderOptions>(
+    options =>
+    {
+        options.TokenLifespan = TimeSpan.FromMinutes(30);
+    });
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -109,7 +119,23 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<RequestService>();
 
+builder.Services.AddScoped<DepartmentService>();
+
+builder.Services.AddScoped<UserService>();
+
 builder.Services.AddScoped<TokenService>();
+
+builder.Services
+    .AddOptions<SmtpEmailOptions>()
+    .BindConfiguration(SmtpEmailOptions.SectionName)
+    .ValidateDataAnnotations();
+
+builder.Services
+    .AddOptions<FrontendOptions>()
+    .BindConfiguration(FrontendOptions.SectionName)
+    .ValidateDataAnnotations();
+
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 // Add services to the container.
 builder.Services.AddControllers();

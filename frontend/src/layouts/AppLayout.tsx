@@ -30,6 +30,14 @@ export function AppLayout({ currentUser, onLogout }: AppLayoutProps) {
   const isDetail = location.pathname.startsWith('/requests/') && !location.pathname.endsWith('/new') && !location.pathname.endsWith('/edit')
   const isNew = location.pathname === '/requests/new'
   const isEdit = location.pathname.endsWith('/edit')
+  const isMyApprovals = location.pathname === '/my-approvals'
+  const isApprovalHistory = location.pathname === '/approval-history'
+  const isDepartments = location.pathname === '/departments'
+  const isUsers = location.pathname.startsWith('/users')
+  const isNewUser = location.pathname === '/users/new'
+  const isProfile = location.pathname.startsWith('/profile')
+  const isProfileSecurity = location.pathname === '/profile/security'
+  const canApprove = currentUser.role === 'Manager' || currentUser.role === 'Admin'
 
   return (
     <div className="adminhub-shell">
@@ -85,6 +93,75 @@ export function AppLayout({ currentUser, onLogout }: AppLayoutProps) {
             </svg>
             <span>New Request</span>
           </NavLink>
+
+          {canApprove && (
+            <>
+              <div className="nav-section-title">APPROVALS</div>
+              <NavLink
+                to="/my-approvals"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'adminhub-nav-link adminhub-nav-link-active'
+                    : 'adminhub-nav-link'
+                }
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+                <span>My Approvals</span>
+              </NavLink>
+              <NavLink
+                to="/approval-history"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'adminhub-nav-link adminhub-nav-link-active'
+                    : 'adminhub-nav-link'
+                }
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="9" />
+                  <polyline points="12 7 12 12 15 14" />
+                </svg>
+                <span>Approval History</span>
+              </NavLink>
+            </>
+          )}
+
+          <div className="nav-section-title">MANAGEMENT</div>
+          <NavLink
+            to="/departments"
+            className={({ isActive }) =>
+              isActive
+                ? 'adminhub-nav-link adminhub-nav-link-active'
+                : 'adminhub-nav-link'
+            }
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M8 21V7h8v14" />
+              <path d="M9 10h2M13 10h2M9 14h2M13 14h2" />
+            </svg>
+            <span>Departments</span>
+          </NavLink>
+          {currentUser.role === 'Admin' && (
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                isActive
+                  ? 'adminhub-nav-link adminhub-nav-link-active'
+                  : 'adminhub-nav-link'
+              }
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <span>Users</span>
+            </NavLink>
+          )}
         </nav>
 
         {/* Sidebar Footer Secondary Navigation (AdminHub Image 2 style) */}
@@ -114,9 +191,41 @@ export function AppLayout({ currentUser, onLogout }: AppLayoutProps) {
         {/* Top Navbar */}
         <header className="adminhub-topbar">
           <nav className="topbar-breadcrumbs" aria-label="Breadcrumb">
-            <span className="breadcrumb-muted">Approvals</span>
+            <span className="breadcrumb-muted">
+              {isProfile
+                ? 'Account'
+                : isMyApprovals || isApprovalHistory
+                ? 'Approvals'
+                : isDepartments || isUsers
+                  ? 'Management'
+                  : 'Requests'}
+            </span>
             <span className="breadcrumb-separator">/</span>
-            <span className="breadcrumb-muted">Purchase Request</span>
+            <span className={isProfile || isMyApprovals || isApprovalHistory || isDepartments || isUsers ? 'breadcrumb-active' : 'breadcrumb-muted'}>
+              {isProfile
+                ? 'Profile'
+                : isMyApprovals
+                ? 'My Approvals'
+                : isApprovalHistory
+                  ? 'Approval History'
+                  : isDepartments
+                    ? 'Departments'
+                    : isUsers
+                      ? 'Users'
+                      : 'Purchase Request'}
+            </span>
+            {isProfileSecurity && (
+              <>
+                <span className="breadcrumb-separator">/</span>
+                <span className="breadcrumb-active">Security</span>
+              </>
+            )}
+            {isNewUser && (
+              <>
+                <span className="breadcrumb-separator">/</span>
+                <span className="breadcrumb-active">New</span>
+              </>
+            )}
             {isDetail && (
               <>
                 <span className="breadcrumb-separator">/</span>
@@ -138,15 +247,23 @@ export function AppLayout({ currentUser, onLogout }: AppLayoutProps) {
           </nav>
 
           <div className="topbar-right">
-            <div className="topbar-user">
+            <NavLink
+              to="/profile"
+              className={({ isActive }) =>
+                isActive ? 'topbar-user topbar-user-active' : 'topbar-user'
+              }
+              aria-label="Open profile"
+            >
               <span className="topbar-avatar" aria-hidden="true">
-                {currentUser.email.charAt(0).toUpperCase()}
+                {(currentUser.fullName || currentUser.email).charAt(0).toUpperCase()}
               </span>
               <div className="topbar-user-info">
-                <strong>{currentUser.email}</strong>
-                <span className="role-tag">{currentUser.role}</span>
+                <strong>{currentUser.fullName || currentUser.email}</strong>
+                <span className={`role-tag role-${currentUser.role.toLowerCase()}`}>
+                  {currentUser.role}
+                </span>
               </div>
-            </div>
+            </NavLink>
 
             <button
               className="topbar-logout-btn"

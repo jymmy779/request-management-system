@@ -42,6 +42,8 @@ export type RequestQuery = {
   search?: string;
   status?: RequestStatus;
   category?: RequestCategory;
+  priority?: RequestPriority;
+  departmentId?: number;
   sortBy?: "createdAt" | "title" | "status";
   sortDirection?: "asc" | "desc";
 };
@@ -61,7 +63,9 @@ type ApiValidationProblem = {
   errors?: Record<string, string[]>;
 };
 
-export async function getRequests(
+async function getRequestPage(
+  basePath: string,
+  fallbackErrorMessage: string,
   query: RequestQuery = {},
 ): Promise<PagedResult<RequestItem>> {
   const searchParameters = new URLSearchParams();
@@ -73,7 +77,7 @@ export async function getRequests(
   }
 
   const queryString = searchParameters.toString();
-  const path = queryString ? `/requests?${queryString}` : "/requests";
+  const path = queryString ? `${basePath}?${queryString}` : basePath;
 
   const response = await fetch(apiUrl(path), {
     credentials: "include",
@@ -84,10 +88,40 @@ export async function getRequests(
   }
 
   if (!response.ok) {
-    throw new Error("Unable to load requests.");
+    throw new Error(fallbackErrorMessage);
   }
 
   return (await response.json()) as PagedResult<RequestItem>;
+}
+
+export function getRequests(
+  query: RequestQuery = {},
+): Promise<PagedResult<RequestItem>> {
+  return getRequestPage(
+    "/requests",
+    "Unable to load requests.",
+    query,
+  );
+}
+
+export function getMyApprovals(
+  query: RequestQuery = {},
+): Promise<PagedResult<RequestItem>> {
+  return getRequestPage(
+    "/requests/my-approvals",
+    "Unable to load approvals.",
+    query,
+  );
+}
+
+export function getApprovalHistory(
+  query: RequestQuery = {},
+): Promise<PagedResult<RequestItem>> {
+  return getRequestPage(
+    "/requests/approval-history",
+    "Unable to load approval history.",
+    query,
+  );
 }
 
 export async function getRequestById(id: number): Promise<RequestItem> {

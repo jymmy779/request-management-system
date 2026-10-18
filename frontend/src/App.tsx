@@ -57,6 +57,11 @@ function App() {
     setCurrentUser(null)
   }
 
+  function handleSessionInvalidated() {
+    setSessionError('')
+    setCurrentUser(null)
+  }
+
   if (isCheckingSession) {
     return (
       <main className="app-shell">
@@ -73,6 +78,7 @@ function App() {
       sessionError={sessionError}
       onLogin={handleLogin}
       onLogout={handleLogout}
+      onSessionInvalidated={handleSessionInvalidated}
     />
   )
 }

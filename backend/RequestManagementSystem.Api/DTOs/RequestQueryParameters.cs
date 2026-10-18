@@ -20,6 +20,12 @@ public class RequestQueryParameters
     [RegularExpression(RequestCategories.ValidationPattern)]
     public string? Category { get; set; }
 
+    [RegularExpression(RequestPriorities.ValidationPattern)]
+    public string? Priority { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? DepartmentId { get; set; }
+
     [RegularExpression("^(createdAt|title|status)$")]
     public string SortBy { get; set; } = "createdAt";
 

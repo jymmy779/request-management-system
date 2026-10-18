@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RequestManagementSystem.Api.Data;
 using RequestManagementSystem.Api.DTOs;
 using RequestManagementSystem.Api.Models;
+using RequestModel = RequestManagementSystem.Api.Models.Request;
 
 namespace RequestManagementSystem.Api.Services;
 
@@ -27,6 +28,41 @@ public class RequestService
                 request => request.RequesterId == requesterId);
         }
 
+        return await GetPagedRequestsAsync(query, parameters);
+    }
+
+    public async Task<PagedResult<RequestResponseDto>> GetMyApprovalsAsync(
+        string actorUserId,
+        RequestQueryParameters parameters)
+    {
+        var query = _context.Requests
+            .AsNoTracking()
+            .Where(request =>
+                request.Status == RequestStatuses.Pending &&
+                request.RequesterId != actorUserId);
+
+        return await GetPagedRequestsAsync(query, parameters);
+    }
+
+    public async Task<PagedResult<RequestResponseDto>> GetApprovalHistoryAsync(
+        string actorUserId,
+        RequestQueryParameters parameters)
+    {
+        var query = _context.Requests
+            .AsNoTracking()
+            .Where(request => request.StatusHistory.Any(history =>
+                history.ChangedByUserId == actorUserId &&
+                (history.ToStatus == RequestStatuses.Approved ||
+                 history.ToStatus == RequestStatuses.Rejected)));
+
+        return await GetPagedRequestsAsync(query, parameters);
+    }
+
+    private static async Task<PagedResult<RequestResponseDto>>
+        GetPagedRequestsAsync(
+            IQueryable<RequestModel> query,
+            RequestQueryParameters parameters)
+    {
         if (!string.IsNullOrWhiteSpace(parameters.Search))
         {
             var search = parameters.Search.Trim();
@@ -47,6 +83,19 @@ public class RequestService
         {
             query = query.Where(
                 request => request.Category == parameters.Category);
+        }
+
+        if (parameters.Priority is not null)
+        {
+            query = query.Where(
+                request => request.Priority == parameters.Priority);
+        }
+
+        if (parameters.DepartmentId is not null)
+        {
+            query = query.Where(
+                request => request.Requester.DepartmentId ==
+                    parameters.DepartmentId);
         }
 
         var totalCount = await query.CountAsync();

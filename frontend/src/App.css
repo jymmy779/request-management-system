@@ -265,6 +265,16 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.topbar-user:hover,
+.topbar-user-active {
+  background: #f1f5f9;
 }
 
 .topbar-avatar {
@@ -392,6 +402,255 @@ body {
   align-items: center;
   gap: 10px;
 }
+
+/* Profile */
+/* =========================================================
+   Profile Page
+   ========================================================= */
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+  align-items: start;
+}
+
+.profile-main-col,
+.profile-side-col {
+  min-width: 0;
+}
+
+/* Identity card — no extra margin, card handles it */
+.profile-identity-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Hero Banner */
+.profile-hero-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 28px 24px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+  position: relative;
+  border-radius: var(--radius-lg) var(--radius-lg) 6px 6px;
+}
+
+.profile-hero-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.profile-hero-avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-hero-info {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.profile-hero-info h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.profile-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--role-color, #2563eb) 15%, transparent);
+  color: var(--role-color, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--role-color, #2563eb) 30%, transparent);
+}
+
+/* In hero context: white tinted badge */
+.profile-hero-banner .profile-role-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 6px;
+}
+
+.profile-role-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+/* Details Section */
+.profile-details-section {
+  padding: 24px 28px 28px;
+}
+
+.profile-section-title {
+  margin: 0 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--adminhub-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.profile-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 32px;
+  margin: 0;
+}
+
+.profile-detail-item {
+  min-width: 0;
+}
+
+.profile-detail-item dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: var(--adminhub-text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.profile-detail-item dt svg {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.profile-detail-item dd {
+  margin: 0;
+  color: var(--adminhub-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  padding-left: 19px; /* align with dt text after icon */
+}
+
+.profile-empty-value {
+  color: var(--adminhub-text-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* Quick Action Links */
+.profile-action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profile-action-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: var(--adminhub-text-primary);
+  transition: background 0.15s ease;
+}
+
+.profile-action-link:hover {
+  background: #f1f5f9;
+}
+
+.profile-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: #eff6ff;
+  color: var(--adminhub-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.profile-action-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.profile-action-link > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.profile-action-link > span:nth-child(2) strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--adminhub-text-primary);
+}
+
+.profile-action-link > span:nth-child(2) span {
+  font-size: 12px;
+  color: var(--adminhub-text-muted);
+}
+
+.profile-action-chevron {
+  width: 14px;
+  height: 14px;
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .profile-details-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-hero-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 20px;
+  }
+}
+
 
 /* Standard AdminHub Buttons */
 .btn-primary {
@@ -1147,6 +1406,124 @@ body {
 .status-cancelled {
   background-color: #f1f5f9;
   color: #64748b;
+}
+
+/* ==========================================================================
+   Priority Badges (High, Medium, Low)
+   ========================================================================== */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2.5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  width: fit-content;
+  border: 1px solid transparent;
+}
+
+.priority-badge::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.priority-high {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+.priority-high::before {
+  background-color: #ef4444;
+}
+
+.priority-medium {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+.priority-medium::before {
+  background-color: #f59e0b;
+}
+
+.priority-low {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #15803d;
+}
+.priority-low::before {
+  background-color: #22c55e;
+}
+
+/* ==========================================================================
+   Category Badges (Equipment, Software, Other)
+   ========================================================================== */
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  width: fit-content;
+  border: 1px solid transparent;
+}
+
+.category-equipment {
+  background-color: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+}
+
+.category-software {
+  background-color: #f0fdfa;
+  border-color: #99f6e4;
+  color: #0f766e;
+}
+
+.category-other {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+/* ==========================================================================
+   Role Badges (Admin, Manager, Employee)
+   ========================================================================== */
+.role-badge,
+.role-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 9px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  border: 1px solid transparent;
+}
+
+.role-admin {
+  background-color: #faf5ff;
+  border-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+.role-manager {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.role-employee {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
 }
 
 /* ==========================================================================
@@ -1909,6 +2286,26 @@ body {
   color: #334155;
 }
 
+/* Simple password input + toggle wrapper (no leading icon) */
+.password-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrap input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+.password-input-wrap .password-toggle {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+
 .login-submit-btn,
 .submit-button {
   width: 100%;
@@ -2189,6 +2586,92 @@ body {
   font-size: 11.5px;
   color: var(--adminhub-text-muted);
   margin-top: 2px;
+}
+
+/* Role Card Selector (CreateUserForm) */
+.role-card-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .role-card-selector {
+    grid-template-columns: 1fr;
+  }
+}
+
+.role-option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.role-option-card:hover:not(:disabled) {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.role-card-active {
+  border-color: var(--adminhub-primary) !important;
+  background-color: #eff6ff !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.role-icon-wrap {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-icon-wrap svg {
+  width: 18px;
+  height: 18px;
+}
+
+.role-icon-employee {
+  background-color: #f1f5f9;
+  color: #334155;
+}
+
+.role-icon-manager {
+  background-color: #eff6ff;
+  color: #1d4ed8;
+}
+
+.role-icon-admin {
+  background-color: #faf5ff;
+  color: #6b21a8;
+}
+
+.role-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.role-text-wrap strong {
+  font-size: 13.5px;
+  color: var(--adminhub-text-primary);
+}
+
+.role-text-wrap span {
+  font-size: 11.5px;
+  color: var(--adminhub-text-muted);
+  line-height: 1.35;
 }
 
 /* Sidebar Workflow Preview */
@@ -2490,6 +2973,10 @@ body {
   }
 
   .details-attribute-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-details-grid {
     grid-template-columns: 1fr;
   }
 }

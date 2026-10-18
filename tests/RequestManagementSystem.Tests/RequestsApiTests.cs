@@ -168,12 +168,14 @@ public class RequestsApiTests
                 "Beta monitor",
                 RequestCategories.Equipment,
                 RequestStatuses.Pending,
-                manager.Id),
+                manager.Id,
+                RequestPriorities.High),
             CreateRequest(
                 "Alpha monitor",
                 RequestCategories.Equipment,
                 RequestStatuses.Pending,
-                manager.Id),
+                manager.Id,
+                RequestPriorities.High),
             CreateRequest(
                 "Approved monitor",
                 RequestCategories.Equipment,
@@ -206,7 +208,8 @@ public class RequestsApiTests
 
         var response = await client.GetAsync(
             "/api/requests?search=monitor&status=Pending" +
-            "&category=Equipment&sortBy=title&sortDirection=asc");
+            "&category=Equipment&priority=High" +
+            "&sortBy=title&sortDirection=asc");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -293,11 +296,107 @@ public class RequestsApiTests
         Assert.Equal("Request D", result.Items[1].Title);
     }
 
+    [Fact]
+    public async Task GetAll_FiltersRequestsByRequesterDepartment()
+    {
+        var client = _factory.CreateClient();
+
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext =
+            scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+
+        var finance = new Department
+        {
+            Code = "FIN",
+            Name = "Finance"
+        };
+
+        var operations = new Department
+        {
+            Code = "OPS",
+            Name = "Operations"
+        };
+
+        var manager = new ApplicationUser
+        {
+            UserName = "department-manager@test.local",
+            Email = "department-manager@test.local",
+            EmailConfirmed = true,
+            FullName = "Department Manager"
+        };
+
+        var financeUser = new ApplicationUser
+        {
+            UserName = "finance-user@test.local",
+            Email = "finance-user@test.local",
+            EmailConfirmed = true,
+            FullName = "Finance User",
+            Department = finance
+        };
+
+        var operationsUser = new ApplicationUser
+        {
+            UserName = "operations-user@test.local",
+            Email = "operations-user@test.local",
+            EmailConfirmed = true,
+            FullName = "Operations User",
+            Department = operations
+        };
+
+        dbContext.Users.AddRange(
+            manager,
+            financeUser,
+            operationsUser);
+
+        dbContext.Requests.AddRange(
+            CreateRequest(
+                "Finance request",
+                RequestCategories.Other,
+                RequestStatuses.Pending,
+                financeUser.Id),
+            CreateRequest(
+                "Operations request",
+                RequestCategories.Other,
+                RequestStatuses.Pending,
+                operationsUser.Id));
+
+        await dbContext.SaveChangesAsync();
+
+        var tokenService =
+            scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var accessToken = tokenService.CreateToken(
+            manager,
+            new[] { AppRoles.Manager });
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", accessToken);
+
+        var response = await client.GetAsync(
+            $"/api/requests?departmentId={finance.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedResult<RequestResponseDto>>();
+
+        Assert.NotNull(result);
+        Assert.Single(result.Items);
+        Assert.Equal("Finance request", result.Items[0].Title);
+        Assert.Equal("Finance", result.Items[0].RequesterDepartmentName);
+    }
+
     [Theory]
     [InlineData("page=0")]
     [InlineData("pageSize=101")]
     [InlineData("status=Unknown")]
     [InlineData("category=Unknown")]
+    [InlineData("priority=Unknown")]
+    [InlineData("departmentId=0")]
     [InlineData("sortBy=unknown")]
     [InlineData("sortDirection=unknown")]
     public async Task GetAll_WithInvalidQuery_ReturnsBadRequest(
@@ -862,13 +961,15 @@ public class RequestsApiTests
         string title,
         string category,
         string status,
-        string requesterId)
+        string requesterId,
+        string priority = RequestPriorities.Medium)
     {
         return new RequestModel
         {
             Title = title,
             Description = $"Description for {title}.",
             Category = category,
+            Priority = priority,
             Status = status,
             RequesterId = requesterId
         };
